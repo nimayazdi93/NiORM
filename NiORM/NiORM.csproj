@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>A better way for connect to database base on declared classes and declared tables</Title>
+    <Authors>Nima Yazd</Authors>
+    <Company>DESNA.IR</Company>
+    <Description>A new ORM base on Objects and already provided Tables </Description>
+    <PackageProjectUrl>https://github.com/nimayazdi93/NiORM</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/nimayazdi93/NiORM</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>ORM;SQL;Object-Relation;</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
+  </ItemGroup>
+
+</Project>
