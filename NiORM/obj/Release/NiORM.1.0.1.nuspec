@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>NiORM</id>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <title>A better way for connect to database base on declared classes and declared tables</title>
     <authors>Nima Yazd</authors>
     <icon>icon.png</icon>

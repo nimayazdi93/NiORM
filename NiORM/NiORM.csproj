@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>A better way for connect to database base on declared classes and declared tables</Title>
-    <Authors>Nima Yazd</Authors>
+    <Authors>Nima Yazdi</Authors>
     <Company>DESNA.IR</Company>
     <Description>A new ORM base on Objects and already provided Tables </Description>
     <PackageProjectUrl>https://github.com/nimayazdi93/NiORM</PackageProjectUrl>
@@ -14,6 +14,8 @@
     <RepositoryUrl>https://github.com/nimayazdi93/NiORM</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ORM;SQL;Object-Relation;</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +27,13 @@
 
   <ItemGroup>
     <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
