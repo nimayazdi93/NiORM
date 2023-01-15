@@ -9,10 +9,10 @@ namespace NiORM.Interfaces
 {
     public interface ITable
     {
-        [JsonIgnore]
-        string TableName { get; }
-        [JsonIgnore]
-        List<string> PrimaryKeys { get; }
+        //[JsonIgnore]
+        //string TableName { get; }
+        //[JsonIgnore]
+        //List<string> PrimaryKeys { get; }
     }
 
     public interface IView : ITable

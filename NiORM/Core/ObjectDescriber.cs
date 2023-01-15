@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NiORM.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,13 +11,51 @@ namespace NiORM.Core
 {
     public static class ObjectDescriber<T, S> where T : new()
     {
-        public static List<string> Properties(T Object)
+        public static List<string> Properties(T Object, bool PrimaryKey = true)
         {
             Type myType = Object.GetType();
-            IList<PropertyInfo> props = new List<PropertyInfo>(myType.GetProperties());
-            return props.Select(c => c.Name).ToList();
-        }
+            var Keys = GetPrimaryKey(Object);
+            IList<PropertyInfo> props = new List<PropertyInfo>(myType.GetProperties()).ToList();
 
+            if (PrimaryKey)
+            { 
+                return props.Select(c => c.Name).ToList();
+
+            }
+            else
+            {
+
+                return props.Select(c => c.Name).Where(c => Keys.All(k => k != c)).ToList();
+
+            }
+        }
+        public static List<string> GetPrimaryKey(T Object)
+        {
+
+            return Object.GetType().GetProperties().Where(c => c.GetCustomAttributes(true).Any(cc => cc is PrimaryKey)).ToList().Select(c => c.Name).ToList();
+
+        }
+        public static string TableName(T entity)
+        {  var t = entity.GetType();
+            try
+            {
+
+              
+                System.Attribute[] attrs = System.Attribute.GetCustomAttributes(t);
+                foreach (var attr in attrs)
+                {
+                    if (attr is TableName)
+                    {
+                        return ((TableName)attr).Name;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw  ex;
+            }
+            throw new Exception($"class '{t.Name}' should have attribute 'TableName'");
+        }
         public static string SQLFormat(T Object, string Key)
         {
             PropertyInfo myPropertyInfo = Object.GetType().GetProperty(Key);
@@ -49,7 +88,7 @@ namespace NiORM.Core
             {
                 PropertyInfo myPropertyInfo = Object.GetType().GetProperty(Key);
                 var propertyType = myPropertyInfo.PropertyType;
- 
+
                 if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && Value.ToString() == "")
                 {
                     var underlyingType = Nullable.GetUnderlyingType(propertyType);
@@ -92,7 +131,7 @@ namespace NiORM.Core
 
 
 
-                    var type =  GetTypeCodeO(propertyType);
+                    var type = GetTypeCodeO(propertyType);
                     switch (type)
                     {
                         case TypeCode.Int32:
@@ -131,7 +170,7 @@ namespace NiORM.Core
             }
 
         }
-        public static TypeCode GetTypeCodeO(  Type type)
+        public static TypeCode GetTypeCodeO(Type type)
         {
             if (type == typeof(Enum))
                 return TypeCode.Int32;

@@ -1,4 +1,5 @@
-﻿using NiORM.Interfaces;
+﻿using NiORM.Attributes;
+using NiORM.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,17 +21,18 @@ namespace NiORM.Core
             this.ConnectionString = ConnectionString;
             SQLMaster = new SQLMaster<T>(ConnectionString);
         }
+        private string TableName = ObjectDescriber<T, int>.TableName(new T());
         /// <summary>
         /// A method for first row in table
         /// </summary>
         /// <returns></returns>
-        public T First() =>SQLMaster.Get(Query: $"select top(1) * from {new T().TableName}").FirstOrDefault();
+        public T First() =>SQLMaster.Get(Query: $"select top(1) * from {this.TableName}").FirstOrDefault();
         /// <summary>
         ///   A method for first row in table with conditions in TSQL
         /// </summary>
         /// <param name="Query">TSQL Query</param>
         /// <returns></returns>
-        public T First(string Query) =>SQLMaster.Get($"select top(1) * from {new T().TableName} where {Query}").FirstOrDefault();
+        public T First(string Query) =>SQLMaster.Get($"select top(1) * from {this.TableName} where {Query}").FirstOrDefault();
         /// <summary>
         /// A method for find an object using its primary key (Just for tables with one PK)
         /// </summary>
@@ -39,12 +41,13 @@ namespace NiORM.Core
         /// <exception cref="Exception"></exception>
         public T Find(string ID)
         {
-            var Keys = new T().PrimaryKeys;
+            var Keys =  ObjectDescriber<T, int>.GetPrimaryKey(new T());
+
             if (Keys.Count != 1)
                 throw new Exception("The count of arguments are not same as PrimaryKeys");
             var Entity = new T();
             ObjectDescriber<T, int>.SetValue(Entity, Keys[0], int.Parse(ID));
-            return SQLMaster.Get($"Select top(1) * from {new T().TableName} where  [{Keys[0]}]= {ObjectDescriber<T, string>.SQLFormat(Entity, Keys[0])}").FirstOrDefault();
+            return SQLMaster.Get($"Select top(1) * from {this.TableName} where  [{Keys[0]}]= {ObjectDescriber<T, string>.SQLFormat(Entity, Keys[0])}").FirstOrDefault();
         }
         /// <summary>
         /// A method for find an object using its primary key (Just for tables with one PK)
@@ -62,13 +65,14 @@ namespace NiORM.Core
         /// <exception cref="Exception"></exception>
         public T Find(string ID1, string ID2)
         {
-            var Keys = new T().PrimaryKeys;
+            var Keys =  ObjectDescriber<T, int>.GetPrimaryKey(new T());
+
             if (Keys.Count != 2)
                 throw new Exception("The count of arguments are not same as PrimaryKeys");
             var Entity = new T();
             ObjectDescriber<T, int>.SetValue(Entity, Keys[0], int.Parse(ID1));
             ObjectDescriber<T, int>.SetValue(Entity, Keys[1], int.Parse(ID2));
-            return SQLMaster.Get($@"Select top(1) * from {new T().TableName}
+            return SQLMaster.Get($@"Select top(1) * from {this.TableName}
                                     where
                                         [{Keys[0]}]= {ObjectDescriber<T, string>.SQLFormat(Entity, Keys[0])}
                                         and
@@ -87,12 +91,14 @@ namespace NiORM.Core
         {
             var Properties = ObjectDescriber<T, string>.Properties(new T());
             var Addition = "";
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(new T());
+
             if (Properties.Any(c => c == "IsActive"))
             {
-                Addition = $"order by IsActive desc,{new T().PrimaryKeys.FirstOrDefault()}";
+                Addition = $"order by IsActive desc,{PrimaryKeys.FirstOrDefault()}";
             }
              
-            return SQLMaster.Get($"select * from {new T().TableName} {Addition}").ToList();
+            return SQLMaster.Get($"select * from {this.TableName} {Addition}").ToList();
         }
         /// <summary>
         /// A method for fetching table with Query in where
@@ -118,7 +124,7 @@ namespace NiORM.Core
         /// <returns></returns>
         public List<T> List(string Query)
         {
-            return SQLMaster.Get($"select * from {new T().TableName} where {Query}").ToList();
+            return SQLMaster.Get($"select * from {this.TableName} where {Query}").ToList();
         }
 
         public List<T> Where(Func<T, bool> Predict)
@@ -160,11 +166,11 @@ namespace NiORM.Core
                 updatable.UpdatedDateTime = DateTime.Now;
                 entity = (T)updatable;
             }
+
             var ListOfProperties = ObjectDescriber<T, int>
-                                        .Properties(entity)
-                                        .Where(c => c != "TableName" & c != "PrimaryKeys")
-                                        .Where(c => c.Replace("ID", "") != Type).ToList();
-            var Query = $@"insert into {entity.TableName} 
+                                        .Properties(entity,PrimaryKey:false).ToList();
+
+            var Query = $@"insert into {this.TableName} 
                            (
                             {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
                             )
@@ -176,8 +182,9 @@ namespace NiORM.Core
            SQLMaster.Execute(Query);
 
             var ID = 0;
-            entity = this.Query($"select  {entity.PrimaryKeys.FirstOrDefault()} from {entity.TableName} order by {entity.PrimaryKeys.FirstOrDefault()} desc").FirstOrDefault();
-            return ObjectDescriber<T, int>.GetValue(entity, entity.PrimaryKeys.FirstOrDefault());
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(entity);
+            entity = this.Query($"select  {PrimaryKeys.FirstOrDefault()} from {this.TableName} order by {PrimaryKeys.FirstOrDefault()} desc").FirstOrDefault();
+            return ObjectDescriber<T, int>.GetValue(entity, PrimaryKeys.FirstOrDefault());
 
         }
 
@@ -201,12 +208,14 @@ namespace NiORM.Core
                 entity = (T)updatable;
             }
             var ListOfProperties = ObjectDescriber<T, int>
-               .Properties(entity)
-               .Where(c => c != "TableName").ToList();
-            var NonKeys = ListOfProperties.Where(c => c != "PrimaryKeys").Where(c => entity.PrimaryKeys.All(cc => cc != c)).ToList();
-            var Query = $@"update {entity.TableName}
+               .Properties(entity, PrimaryKey:false) .ToList();
+
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(entity);
+
+            var NonKeys = ListOfProperties.ToList();
+            var Query = $@"update {this.TableName}
                            set {string.Join(",\n", NonKeys.Select(c => $"[{c}]={ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}
-                           where {string.Join(" and ", entity.PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}";
+                           where {string.Join(" and ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}";
 
            SQLMaster.Execute(Query);
         }
@@ -216,8 +225,10 @@ namespace NiORM.Core
         /// <param name="entity">object we are removing</param>
         public void Remove(T entity)
         {
-            var Query = $@"delete {entity.TableName}  
-                            where {string.Join(" and ", entity.PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}";
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(entity);
+
+            var Query = $@"delete {this.TableName}  
+                            where {string.Join(" and ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}";
            SQLMaster.Execute(Query);
         }
     }

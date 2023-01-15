@@ -18,7 +18,8 @@ namespace NiORM.Test.Service
         /// For Using Many Databases with One DataCore
         /// </summary>
         /// <param name="ConnectionString"></param>
-        public DataService(string ConnectionString) : base(ConnectionString){        }
+        public DataService(string ConnectionString) : base(ConnectionString){   
+        }
 
         public Entities<Person> People => CreateEntity<Person>();
 

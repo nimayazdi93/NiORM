@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>NiORM</id>
+    <version>1.1.1</version>
+    <title>A better way for connect to database base on declared classes and declared tables</title>
+    <authors>Nima Yazdi</authors>
+    <icon>icon.png</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/nimayazdi93/NiORM</projectUrl>
+    <description>A new ORM base on Objects and already provided Tables</description>
+    <releaseNotes>this version includes some optimization in coding and uses  CustomeAttributes
+for finding a better way please see NiORM.Test project in github repository.</releaseNotes>
+    <tags>ORM SQL Object-Relation</tags>
+    <packageTypes>
+      <packageType name="DotnetTool" />
+    </packageTypes>
+    <repository type="git" url="https://github.com/nimayazdi93/NiORM" />
+  </metadata>
+  <files>
+    <file src="F:\Programming\Nuget\NiORM\NiORM\obj\DotnetToolSettings.xml" target="tools\net6.0\any\DotnetToolSettings.xml" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\NiORM.dll" target="tools\net6.0\any\NiORM.dll" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\NiORM.deps.json" target="tools\net6.0\any\NiORM.deps.json" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\NiORM.pdb" target="tools\net6.0\any\NiORM.pdb" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\System.Data.SqlClient.dll" target="tools\net6.0\any\System.Data.SqlClient.dll" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\runtimes\win-arm64\native\sni.dll" target="tools\net6.0\any\runtimes\win-arm64\native\sni.dll" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\runtimes\win-x64\native\sni.dll" target="tools\net6.0\any\runtimes\win-x64\native\sni.dll" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\runtimes\win-x86\native\sni.dll" target="tools\net6.0\any\runtimes\win-x86\native\sni.dll" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\runtimes\unix\lib\netcoreapp2.1\System.Data.SqlClient.dll" target="tools\net6.0\any\runtimes\unix\lib\netcoreapp2.1\System.Data.SqlClient.dll" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\bin\Release\net6.0\publish\runtimes\win\lib\netcoreapp2.1\System.Data.SqlClient.dll" target="tools\net6.0\any\runtimes\win\lib\netcoreapp2.1\System.Data.SqlClient.dll" />
+    <file src="F:\Programming\Nuget\NiORM\NiORM\icon.png" target="\icon.png" />
+    <file src="F:\Programming\Nuget\NiORM\README.md" target="\README.md" />
+  </files>
+</package>
