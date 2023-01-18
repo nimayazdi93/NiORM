@@ -4,7 +4,7 @@ using NiORM.Interfaces;
 
 namespace NiORM.Test.Models
 {
-    [TableName("People_Table")]
+    [TableName("People")]
     public class Person : ITable
     {
         [PrimaryKey]
