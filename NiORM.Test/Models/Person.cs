@@ -1,5 +1,4 @@
 ﻿using NiORM.Attributes;
-using NiORM.Core;
 using NiORM.Interfaces;
 
 namespace NiORM.Test.Models
@@ -10,7 +9,7 @@ namespace NiORM.Test.Models
         [PrimaryKey]
         public int Id { get; set; }
         public string Name { get; set; }
-        public int Age { get; set; }  
+        public int Age { get; set; }
 
     }
 }

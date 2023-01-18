@@ -16,21 +16,21 @@ namespace NiORM.Core
             sqlConnection.Open();
             var command = new SqlCommand(Query, sqlConnection);
             using SqlDataReader reader = command.ExecuteReader();
-            var Result = new List<T>();
+            var result = new List<T>();
             while (reader.Read())
             {
-                var FieldCount = reader.FieldCount;
-                var Record = new T();
-                var Schema = reader.GetColumnSchema();
-                for (int i = 0; i < FieldCount; i++)
+                var fieldCount = reader.FieldCount;
+                var record = new T();
+                var schema = reader.GetColumnSchema();
+                for (int i = 0; i < fieldCount; i++)
                 {
-                    ObjectDescriber<T, object>.SetValue(Record, Schema[i].ColumnName, reader.GetValue(i));
+                    ObjectDescriber<T, object>.SetValue(record, schema[i].ColumnName, reader.GetValue(i));
                 }
-                Result.Add(Record);
+                result.Add(record);
             }
             reader.Close();
             sqlConnection.Close();
-            return Result;
+            return result;
         }
 
         public void Execute(string Query)
