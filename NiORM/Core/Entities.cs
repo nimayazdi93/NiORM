@@ -173,9 +173,12 @@ namespace NiORM.Core
             }
 
             var ListOfProperties = ObjectDescriber<T, int>
-                                   .GetProperties(entity, includePrimaryKey: false)
+                                   .GetProperties(entity)
                                    .ToList();
-
+            var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
+           
+             ListOfProperties.AddRange(PrimaryKeysDetails.Where(c => c.IsAutoIncremental == false).Select(c=>c.Name).ToList());
+            ListOfProperties = ListOfProperties.Distinct().ToList();
             var Query = $@"INSERT INTO {this.TableName} 
                            (
                             {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
@@ -189,7 +192,7 @@ namespace NiORM.Core
 
             var id = 0;
             var primaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
-            entity = this.Query($"SELECT  {primaryKeys.FirstOrDefault()} FROM {this.TableName} ORDER BY {primaryKeys.FirstOrDefault()} DESC").FirstOrDefault();
+            entity = this.Query($"SELECT  {primaryKeys.FirstOrDefault()} FROM {this.TableName} ORDER BY {string.Join(",",primaryKeys)} DESC").FirstOrDefault();
             return ObjectDescriber<T, int>.GetValue(entity, primaryKeys.FirstOrDefault());
         }
 
@@ -212,13 +215,15 @@ namespace NiORM.Core
                 entity = (T)updatable;
             }
             var ListOfProperties = ObjectDescriber<T, int>
-               .GetProperties(entity, includePrimaryKey: false).ToList();
+               .GetProperties(entity ).ToList();
 
             var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
-
-            var NonKeys = ListOfProperties.ToList();
+            var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
+            ListOfProperties.AddRange(PrimaryKeysDetails.Where(c => c.IsAutoIncremental == false).Select(c => c.Name).ToList());
+            ListOfProperties = ListOfProperties.Distinct().ToList();
+             
             var Query = $@"UPDATE {this.TableName}
-                           SET {string.Join(",\n", NonKeys.Select(c => $"[{c}]={ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}
+                           SET {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]={ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}
                            WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
 
             SqlMaster.Execute(Query);

@@ -6,31 +6,39 @@ namespace NiORM.Core
 {
     public static class ObjectDescriber<T, TValue> where T : new()
     {
-        public static List<string> GetProperties(T entity, bool includePrimaryKey = true)
+        public static List<string> GetProperties(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
             var objectType = entity.GetType();
-            var Keys = GetPrimaryKeys(entity);
+            var Keys = GetPrimaryKeyDetails(entity);
             var ListOfPropertyInfo = new List<PropertyInfo>(objectType.GetProperties()).ToList();
 
             var properties = ListOfPropertyInfo.Select(c => c.Name);
-            if (!includePrimaryKey)
-            {
-                properties = properties.Where(c => Keys.All(k => k != c));
-            }
-
+            
             return properties.ToList();
         }
 
         public static List<string> GetPrimaryKeys(T entity)
         {
+            if (entity is null) throw new ArgumentNullException(nameof(entity)); 
+
+            return entity.GetType().GetProperties()
+              .Where(property =>
+              property.GetCustomAttributes(true)
+              .Any(customeAttribute => customeAttribute is PrimaryKey)).Select(c=>c.Name).ToList();
+
+        }
+        public static List<PrimaryKeyDetails> GetPrimaryKeyDetails(T entity)
+        {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
             return entity.GetType().GetProperties()
-                .Where(c => c.GetCustomAttributes(true)
-                .Any(c => c is PrimaryKey)).ToList()
-                .Select(c => c.Name).ToList();
+              .SelectMany(property =>
+              property.GetCustomAttributes(true)
+              .Where(customeAttribute => customeAttribute is PrimaryKey)
+              .Select(customeAttribute => new PrimaryKeyDetails(property.Name, ((PrimaryKey)customeAttribute).IsAutoIncremental))).ToList();
+
         }
 
         public static string GetTableName(T entity)
