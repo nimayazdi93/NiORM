@@ -1,10 +1,4 @@
-﻿using NiORM.Attributes;
-using NiORM.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using NiORM.Interfaces;
 
 namespace NiORM.Core
 {
@@ -14,92 +8,101 @@ namespace NiORM.Core
     /// <typeparam name="T">Type Of Object related to table. It should be inherited from ITable</typeparam>
     public class Entities<T> where T : ITable, new()
     {
-        private string ConnectionString { get; set; }
-        private SQLMaster<T> SQLMaster { get; set; } 
+        private string ConnectionString { get; init; }
+        private SqlMaster<T> SqlMaster { get; init; }
         public Entities(string ConnectionString)
         {
             this.ConnectionString = ConnectionString;
-            SQLMaster = new SQLMaster<T>(ConnectionString);
+            SqlMaster = new SqlMaster<T>(ConnectionString);
         }
-        private string TableName = ObjectDescriber<T, int>.TableName(new T());
+
+        private string TableName = ObjectDescriber<T, int>.GetTableName(new T());
+
         /// <summary>
         /// A method for first row in table
         /// </summary>
         /// <returns></returns>
-        public T First() =>SQLMaster.Get(Query: $"select top(1) * from {this.TableName}").FirstOrDefault();
+        public T FirstOrDefault() => SqlMaster.Get(Query: $"SELECT TOP(1) * FROM {this.TableName}").FirstOrDefault();
+
         /// <summary>
         ///   A method for first row in table with conditions in TSQL
         /// </summary>
         /// <param name="Query">TSQL Query</param>
         /// <returns></returns>
-        public T First(string Query) =>SQLMaster.Get($"select top(1) * from {this.TableName} where {Query}").FirstOrDefault();
+        public T FirstOrDefault(string Query) => SqlMaster.Get($"SELECT TOP(1) * FROM {this.TableName} WHERE {Query}").FirstOrDefault();
+
         /// <summary>
         /// A method for find an object using its primary key (Just for tables with one PK)
         /// </summary>
-        /// <param name="ID">Primary Key</param>
+        /// <param name="id">Primary Key</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public T Find(string ID)
+        public T Find(string id)
         {
-            var Keys =  ObjectDescriber<T, int>.GetPrimaryKey(new T());
+            var Keys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
 
             if (Keys.Count != 1)
                 throw new Exception("The count of arguments are not same as PrimaryKeys");
             var Entity = new T();
-            ObjectDescriber<T, int>.SetValue(Entity, Keys[0], int.Parse(ID));
-            return SQLMaster.Get($"Select top(1) * from {this.TableName} where  [{Keys[0]}]= {ObjectDescriber<T, string>.SQLFormat(Entity, Keys[0])}").FirstOrDefault();
+            ObjectDescriber<T, int>.SetValue(Entity, Keys[0], int.Parse(id));
+            return SqlMaster.Get($"Select top(1) * from {this.TableName} where  [{Keys[0]}]= {ObjectDescriber<T, string>.ToSqlFormat(Entity, Keys[0])}").FirstOrDefault();
         }
+
         /// <summary>
         /// A method for find an object using its primary key (Just for tables with one PK)
         /// </summary>
-        /// <param name="ID">Primary Key</param>
+        /// <param name="id">Primary Key</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public T Find(int ID) => Find(ID.ToString());
+        public T Find(int id) => Find(id.ToString());
+
         /// <summary>
         /// A method for find an object using its primary key (Just for tables with two PK)
         /// </summary>
-        /// <param name="ID1">Primary Key</param>
-        /// <param name="ID2">Primary Key</param>
+        /// <param name="firstId">Primary Key</param>
+        /// <param name="secondId">Primary Key</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public T Find(string ID1, string ID2)
+        public T Find(string firstId, string secondId)
         {
-            var Keys =  ObjectDescriber<T, int>.GetPrimaryKey(new T());
+            var Keys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
 
             if (Keys.Count != 2)
                 throw new Exception("The count of arguments are not same as PrimaryKeys");
             var Entity = new T();
-            ObjectDescriber<T, int>.SetValue(Entity, Keys[0], int.Parse(ID1));
-            ObjectDescriber<T, int>.SetValue(Entity, Keys[1], int.Parse(ID2));
-            return SQLMaster.Get($@"Select top(1) * from {this.TableName}
-                                    where
-                                        [{Keys[0]}]= {ObjectDescriber<T, string>.SQLFormat(Entity, Keys[0])}
-                                        and
-                                         [{Keys[1]}]= {ObjectDescriber<T, string>.SQLFormat(Entity, Keys[1])}").FirstOrDefault();
+            ObjectDescriber<T, int>.SetValue(Entity, Keys[0], int.Parse(firstId));
+            ObjectDescriber<T, int>.SetValue(Entity, Keys[1], int.Parse(secondId));
+            return SqlMaster.Get($@"SELECT TOP(1) * FROM {this.TableName}
+                                    WHERE
+                                        [{Keys[0]}]= {ObjectDescriber<T, string>.ToSqlFormat(Entity, Keys[0])}
+                                        AND
+                                         [{Keys[1]}]= {ObjectDescriber<T, string>.ToSqlFormat(Entity, Keys[1])}").FirstOrDefault();
 
         }
+
         /// <summary>
         /// A method for find an object using its primary key (Just for tables with two PK)
         /// </summary>
-        /// <param name="ID1">Primary Key</param>
-        /// <param name="ID2">Primary Key</param>
+        /// <param name="firstId">Primary Key</param>
+        /// <param name="secondId">Primary Key</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public T Find(int ID1, string ID2) => Find(ID1.ToString(), ID2.ToString());
-        public List<T> List()
+        public T Find(int firstId, string secondId) => Find(firstId.ToString(), secondId.ToString());
+
+        public List<T> ToList()
         {
-            var Properties = ObjectDescriber<T, string>.Properties(new T());
+            var Properties = ObjectDescriber<T, string>.GetProperties(new T());
             var Addition = "";
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(new T());
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
 
             if (Properties.Any(c => c == "IsActive"))
             {
-                Addition = $"order by IsActive desc,{PrimaryKeys.FirstOrDefault()}";
+                Addition = $"ORDER BY IsActive DESC,{PrimaryKeys.FirstOrDefault()}";
             }
-             
-            return SQLMaster.Get($"select * from {this.TableName} {Addition}").ToList();
+
+            return SqlMaster.Get($"SELECT * FROM {this.TableName} {Addition}").ToList();
         }
+
         /// <summary>
         /// A method for fetching table with Query in where
         /// </summary>
@@ -107,16 +110,18 @@ namespace NiORM.Core
         /// <returns></returns>
         public List<T> Query(string Query)
         {
-            return SQLMaster.Get(Query).ToList();
+            return SqlMaster.Get(Query).ToList();
         }
+
         /// <summary>
         /// A method for executing a TSQL command
         /// </summary>
         /// <param name="Query"></param>
         public void Execute(string Query)
         {
-           SQLMaster.Execute(Query);
+            SqlMaster.Execute(Query);
         }
+
         /// <summary>
         /// A method for fetching table with Query in where
         /// </summary>
@@ -124,12 +129,12 @@ namespace NiORM.Core
         /// <returns></returns>
         public List<T> List(string Query)
         {
-            return SQLMaster.Get($"select * from {this.TableName} where {Query}").ToList();
+            return SqlMaster.Get($"SELECT * FROM {this.TableName} WHERE {Query}").ToList();
         }
 
         public List<T> Where(Func<T, bool> Predict)
         {
-            return List().Where(Predict).ToList();
+            return ToList().Where(Predict).ToList();
         }
         /// <summary>
         /// A extension for linq's WHERE
@@ -142,11 +147,11 @@ namespace NiORM.Core
 
         }
 
-
         private string GetType()
         {
             return new T().GetType().ToString().Split(".").LastOrDefault();
         }
+
         /// <summary>
         /// A method for adding a row
         /// </summary>
@@ -168,33 +173,32 @@ namespace NiORM.Core
             }
 
             var ListOfProperties = ObjectDescriber<T, int>
-                                        .Properties(entity,PrimaryKey:false).ToList();
+                                   .GetProperties(entity, includePrimaryKey: false)
+                                   .ToList();
 
-            var Query = $@"insert into {this.TableName} 
+            var Query = $@"INSERT INTO {this.TableName} 
                            (
                             {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
                             )
                             Values
                             (
-                             {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.SQLFormat(entity, c)).ToList())}
+                             {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.ToSqlFormat(entity, c)).ToList())}
                              )";
 
-           SQLMaster.Execute(Query);
+            SqlMaster.Execute(Query);
 
-            var ID = 0;
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(entity);
-            entity = this.Query($"select  {PrimaryKeys.FirstOrDefault()} from {this.TableName} order by {PrimaryKeys.FirstOrDefault()} desc").FirstOrDefault();
-            return ObjectDescriber<T, int>.GetValue(entity, PrimaryKeys.FirstOrDefault());
-
+            var id = 0;
+            var primaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
+            entity = this.Query($"SELECT  {primaryKeys.FirstOrDefault()} FROM {this.TableName} ORDER BY {primaryKeys.FirstOrDefault()} DESC").FirstOrDefault();
+            return ObjectDescriber<T, int>.GetValue(entity, primaryKeys.FirstOrDefault());
         }
-
 
         /// <summary>
         /// A method for editing a row
         /// </summary>
         /// <param name="entity">object we are editing</param>
         /// <exception cref="Exception"></exception>
-        public void Edit(T entity)
+        public void Update(T entity)
         {
             var Type = GetType();
 
@@ -208,28 +212,29 @@ namespace NiORM.Core
                 entity = (T)updatable;
             }
             var ListOfProperties = ObjectDescriber<T, int>
-               .Properties(entity, PrimaryKey:false) .ToList();
+               .GetProperties(entity, includePrimaryKey: false).ToList();
 
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(entity);
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
 
             var NonKeys = ListOfProperties.ToList();
-            var Query = $@"update {this.TableName}
-                           set {string.Join(",\n", NonKeys.Select(c => $"[{c}]={ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}
-                           where {string.Join(" and ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}";
+            var Query = $@"UPDATE {this.TableName}
+                           SET {string.Join(",\n", NonKeys.Select(c => $"[{c}]={ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}
+                           WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
 
-           SQLMaster.Execute(Query);
+            SqlMaster.Execute(Query);
         }
+
         /// <summary>
         /// A method for removing a row
         /// </summary>
         /// <param name="entity">object we are removing</param>
         public void Remove(T entity)
         {
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKey(entity);
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
 
-            var Query = $@"delete {this.TableName}  
-                            where {string.Join(" and ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.SQLFormat(entity, c)}").ToList())}";
-           SQLMaster.Execute(Query);
+            var Query = $@"DELETE {this.TableName}  
+                            WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
+            SqlMaster.Execute(Query);
         }
     }
 }

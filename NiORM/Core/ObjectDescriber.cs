@@ -1,180 +1,187 @@
 ﻿using NiORM.Attributes;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Reflection;
-using System.Security.AccessControl;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NiORM.Core
 {
-    public static class ObjectDescriber<T, S> where T : new()
+    public static class ObjectDescriber<T, TValue> where T : new()
     {
-        public static List<string> Properties(T Object, bool PrimaryKey = true)
+        public static List<string> GetProperties(T entity, bool includePrimaryKey = true)
         {
-            Type myType = Object.GetType();
-            var Keys = GetPrimaryKey(Object);
-            IList<PropertyInfo> props = new List<PropertyInfo>(myType.GetProperties()).ToList();
+            if (entity is null) throw new ArgumentNullException(nameof(entity));
 
-            if (PrimaryKey)
-            { 
-                return props.Select(c => c.Name).ToList();
+            var objectType = entity.GetType();
+            var Keys = GetPrimaryKeys(entity);
+            var ListOfPropertyInfo = new List<PropertyInfo>(objectType.GetProperties()).ToList();
 
-            }
-            else
+            var properties = ListOfPropertyInfo.Select(c => c.Name);
+            if (!includePrimaryKey)
             {
-
-                return props.Select(c => c.Name).Where(c => Keys.All(k => k != c)).ToList();
-
+                properties = properties.Where(c => Keys.All(k => k != c));
             }
+
+            return properties.ToList();
         }
-        public static List<string> GetPrimaryKey(T Object)
+
+        public static List<string> GetPrimaryKeys(T entity)
         {
+            if (entity is null) throw new ArgumentNullException(nameof(entity));
 
-            return Object.GetType().GetProperties().Where(c => c.GetCustomAttributes(true).Any(cc => cc is PrimaryKey)).ToList().Select(c => c.Name).ToList();
-
+            return entity.GetType().GetProperties()
+                .Where(c => c.GetCustomAttributes(true)
+                .Any(c => c is PrimaryKey)).ToList()
+                .Select(c => c.Name).ToList();
         }
-        public static string TableName(T entity)
-        {  var t = entity.GetType();
+
+        public static string GetTableName(T entity)
+        {
+            if (entity is null) throw new ArgumentNullException(nameof(entity));
+            var entityType = entity.GetType();
+
             try
             {
-
-              
-                System.Attribute[] attrs = System.Attribute.GetCustomAttributes(t);
-                foreach (var attr in attrs)
+                var attributes = Attribute.GetCustomAttributes(entityType);
+                foreach (var attribute in attributes)
                 {
-                    if (attr is TableName)
+                    if (attribute is TableName)
                     {
-                        return ((TableName)attr).Name;
+                        return ((TableName)attribute).Name;
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw  ex;
+                throw;
             }
-            throw new Exception($"class '{t.Name}' should have attribute 'TableName'");
+
+            throw new Exception($"class '{entityType.Name}' should have attribute 'TableName'");
         }
-        public static string SQLFormat(T Object, string Key)
+
+        public static string ToSqlFormat(T entity, string Key)
         {
-            PropertyInfo myPropertyInfo = Object.GetType().GetProperty(Key);
-            var Value = myPropertyInfo.GetValue(Object, null);
-            if (Value == null)
+            if (entity is null) throw new ArgumentNullException(nameof(entity));
+
+            PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new ArgumentNullException(nameof(entity));
+            var Value = propertyInfo.GetValue(entity, null);
+            return ConvertToSqlFormat(Value);
+        }
+
+        public static TValue GetValue(T entity, string Key)
+        {
+            if (entity is null) throw new ArgumentNullException(nameof(entity));
+
+            PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new ArgumentNullException(nameof(entity));
+            var propertyInfoValue = propertyInfo.GetValue(entity, null) ?? throw new ArgumentNullException(nameof(entity));
+            return (TValue)propertyInfoValue;
+        }
+
+        public static void SetValue(T entity, string Key, TValue Value)
+        {
+            if (entity is null) throw new ArgumentNullException(nameof(entity));
+            if (Value is null) throw new ArgumentNullException(nameof(entity));
+
+            try
             {
-                return "null";
+                PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new ArgumentNullException(nameof(entity));
+                var propertyType = propertyInfo.PropertyType;
+
+                if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && Value.ToString() == string.Empty)
+                {
+                    var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? throw new ArgumentNullException(nameof(entity));
+                    var underlyingTypeCode = GetTypeCode(underlyingType);
+                    switch (underlyingTypeCode)
+                    {
+                        case TypeCode.Int32:
+                            propertyInfo.SetValue(entity, (int?)null);
+                            return;
+                        case TypeCode.Double:
+                            propertyInfo.SetValue(entity, (double?)null);
+                            return;
+                        case TypeCode.DateTime:
+                            propertyInfo.SetValue(entity, (DateTime?)null);
+                            return;
+                        case TypeCode.Int64:
+                            propertyInfo.SetValue(entity, (long?)null);
+                            return;
+                        case TypeCode.Single:
+                            propertyInfo.SetValue(entity, (float?)null);
+                            return;
+                        case TypeCode.String:
+                            propertyInfo.SetValue(entity, null);
+                            return;
+                        case TypeCode.Boolean:
+                            propertyInfo.SetValue(entity, (bool?)null);
+                            return;
+                        case TypeCode.Object:
+                            propertyInfo.SetValue(entity, null);
+                            return;
+                        default:
+                            propertyInfo.SetValue(entity, Value);
+                            return;
+                    }
+                }
+                else
+                {
+                    var type = GetTypeCode(propertyType);
+                    switch (type)
+                    {
+                        case TypeCode.Int32:
+                            propertyInfo.SetValue(entity, int.Parse(Value.ToString()));
+                            return;
+                        case TypeCode.Double:
+                            propertyInfo.SetValue(entity, double.Parse(Value.ToString()));
+                            return;
+                        case TypeCode.DateTime:
+                            propertyInfo.SetValue(entity, DateTime.Parse(Value.ToString()));
+                            return;
+                        case TypeCode.Int64:
+                            propertyInfo.SetValue(entity, long.Parse(Value.ToString()));
+                            return;
+                        case TypeCode.Single:
+                            propertyInfo.SetValue(entity, float.Parse(Value.ToString()));
+                            return;
+                        case TypeCode.String:
+                            propertyInfo.SetValue(entity, (Value.ToString()));
+                            return;
+                        case TypeCode.Boolean:
+                            propertyInfo.SetValue(entity, (Value.ToString() == "True"));
+                            return;
+                        case TypeCode.Object:
+                            propertyInfo.SetValue(entity, Value);
+                            return;
+                        default:
+                            propertyInfo.SetValue(entity, Value);
+                            return;
+                    }
+                }
             }
+            catch (Exception)
+            {
+                throw;
+            }
+
+        }
+
+        public static TypeCode GetTypeCode(Type type)
+        {
+            if (type == typeof(Enum)) return TypeCode.Int32;
+            return Type.GetTypeCode(type);
+        }
+
+        private static string ConvertToSqlFormat(object? Value)
+        {
+            if (Value == null)
+                return "null";
             if (Value is string)
                 return $"N'{Value}'";
             if (Value is int | Value is float | Value is long | Value is double)
                 return Value.ToString();
             if (Value is DateTime time)
                 return $"'{time:yyyy-MM-dd HH:mm:ss.ss}'";
-            if (Value is bool b)
-                return b ? "1" : "0";
-            return "";
-        }
+            if (Value is bool value)
+                return value ? "1" : "0";
 
-        public static S GetValue(T Object, string Key)
-        {
-            PropertyInfo myPropertyInfo = Object.GetType().GetProperty(Key);
-            var Value = myPropertyInfo.GetValue(Object, null);
-            return (S)Value;
-        }
-
-        public static void SetValue(T Object, string Key, S Value)
-        {
-            try
-            {
-                PropertyInfo myPropertyInfo = Object.GetType().GetProperty(Key);
-                var propertyType = myPropertyInfo.PropertyType;
-
-                if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && Value.ToString() == "")
-                {
-                    var underlyingType = Nullable.GetUnderlyingType(propertyType);
-                    var underlyingTypeCode = GetTypeCodeO(underlyingType);
-                    switch (underlyingTypeCode)
-                    {
-
-
-                        case TypeCode.Int32:
-                            myPropertyInfo.SetValue(Object, (int?)null);
-                            return;
-                        case TypeCode.Double:
-                            myPropertyInfo.SetValue(Object, (double?)null);
-                            return;
-                        case TypeCode.DateTime:
-                            myPropertyInfo.SetValue(Object, (DateTime?)null);
-                            return;
-                        case TypeCode.Int64:
-                            myPropertyInfo.SetValue(Object, (long?)null);
-                            return;
-                        case TypeCode.Single:
-                            myPropertyInfo.SetValue(Object, (float?)null);
-                            return;
-                        case TypeCode.String:
-                            myPropertyInfo.SetValue(Object, null);
-                            return;
-                        case TypeCode.Boolean:
-                            myPropertyInfo.SetValue(Object, (bool?)null);
-                            return;
-                        case TypeCode.Object:
-                            myPropertyInfo.SetValue(Object, null);
-                            return;
-                        default:
-                            myPropertyInfo.SetValue(Object, Value);
-                            return;
-                    }
-                }
-                else
-                {
-
-
-
-                    var type = GetTypeCodeO(propertyType);
-                    switch (type)
-                    {
-                        case TypeCode.Int32:
-                            myPropertyInfo.SetValue(Object, int.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Double:
-                            myPropertyInfo.SetValue(Object, double.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.DateTime:
-                            myPropertyInfo.SetValue(Object, DateTime.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Int64:
-                            myPropertyInfo.SetValue(Object, long.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Single:
-                            myPropertyInfo.SetValue(Object, float.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.String:
-                            myPropertyInfo.SetValue(Object, (Value.ToString()));
-                            return;
-                        case TypeCode.Boolean:
-                            myPropertyInfo.SetValue(Object, (Value.ToString() == "True"));
-                            return;
-                        case TypeCode.Object:
-                            myPropertyInfo.SetValue(Object, Value);
-                            return;
-                        default:
-                            myPropertyInfo.SetValue(Object, Value);
-                            return;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-        }
-        public static TypeCode GetTypeCodeO(Type type)
-        {
-            if (type == typeof(Enum))
-                return TypeCode.Int32;
-            return Type.GetTypeCode(type);
+            return string.Empty;
         }
     }
 }

@@ -1,43 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Data.SqlClient;
 
 namespace NiORM.Core
 {
-    public  class SQLMaster<T> where T : new()
+    public class SqlMaster<T> where T : new()
     {
-        private  string Connection { get; set; }
-        public SQLMaster(string ConnectionString)
+        private string Connection { get; init; }
+        public SqlMaster(string ConnectionString)
         {
             Connection = ConnectionString;
         }
-        public  List<T> Get(string Query)
+
+        public List<T> Get(string Query)
         {
             using SqlConnection sqlConnection = new SqlConnection(Connection);
             sqlConnection.Open();
             var command = new SqlCommand(Query, sqlConnection);
             using SqlDataReader reader = command.ExecuteReader();
-            var Result = new List<T>();
+            var result = new List<T>();
             while (reader.Read())
             {
-                var FeildCount = reader.FieldCount;
-                var Record = new T();
-                var Schema = reader.GetColumnSchema();
-                for (int i = 0; i < FeildCount; i++)
+                var fieldCount = reader.FieldCount;
+                var record = new T();
+                var schema = reader.GetColumnSchema();
+                for (int i = 0; i < fieldCount; i++)
                 {
-                    ObjectDescriber<T, object>.SetValue(Record, Schema[i].ColumnName, reader.GetValue(i));
+                    ObjectDescriber<T, object>.SetValue(record, schema[i].ColumnName, reader.GetValue(i));
                 }
-                Result.Add(Record);
+                result.Add(record);
             }
             reader.Close();
             sqlConnection.Close();
-            return Result;
+            return result;
         }
 
-        public  void Execute(string Query)
+        public void Execute(string Query)
         {
             using SqlConnection sqlConnection = new SqlConnection(Connection);
             sqlConnection.Open();
