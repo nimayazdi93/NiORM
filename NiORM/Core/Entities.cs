@@ -22,14 +22,14 @@ namespace NiORM.Core
         /// A method for first row in table
         /// </summary>
         /// <returns></returns>
-        public T FirstOrDefault() => SqlMaster.Get(Query: $"SELECT TOP(1) * FROM {this.TableName}").FirstOrDefault();
+        public T FirstOrDefault() => SqlMaster.Get(Query: $"SELECT TOP(1) * FROM {TableName}").FirstOrDefault();
 
         /// <summary>
         ///   A method for first row in table with conditions in TSQL
         /// </summary>
         /// <param name="Query">TSQL Query</param>
         /// <returns></returns>
-        public T FirstOrDefault(string Query) => SqlMaster.Get($"SELECT TOP(1) * FROM {this.TableName} WHERE {Query}").FirstOrDefault();
+        public T FirstOrDefault(string Query) => SqlMaster.Get($"SELECT TOP(1) * FROM {TableName} WHERE {Query}").FirstOrDefault();
 
         /// <summary>
         /// A method for find an object using its primary key (Just for tables with one PK)
