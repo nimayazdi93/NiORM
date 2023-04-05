@@ -173,12 +173,23 @@ namespace NiORM.Core
             }
 
             var ListOfProperties = ObjectDescriber<T, int>
-                                   .GetProperties(entity)
+                                   .GetProperties(entity) 
                                    .ToList();
             var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
-           
-             ListOfProperties.AddRange(PrimaryKeysDetails.Where(c => c.IsAutoIncremental == false).Select(c=>c.Name).ToList());
+            PrimaryKeysDetails.ForEach((pk) =>
+            {
+                if (pk.IsAutoIncremental)
+                {
+                    ListOfProperties.Remove(pk.Name);
+                }
+                else
+                {
+                    ListOfProperties.Add(pk.Name);
+                }
+            });
+
             ListOfProperties = ListOfProperties.Distinct().ToList();
+
             var Query = $@"INSERT INTO {this.TableName} 
                            (
                             {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
@@ -219,9 +230,10 @@ namespace NiORM.Core
 
             var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
             var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
+            
             ListOfProperties.AddRange(PrimaryKeysDetails.Where(c => c.IsAutoIncremental == false).Select(c => c.Name).ToList());
             ListOfProperties = ListOfProperties.Distinct().ToList();
-             
+            ListOfProperties = ListOfProperties.Where(c => !PrimaryKeysDetails.Any(cc => cc.Name == c && cc.IsAutoIncremental == true)).ToList();
             var Query = $@"UPDATE {this.TableName}
                            SET {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]={ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}
                            WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
