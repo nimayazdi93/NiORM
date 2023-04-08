@@ -11,9 +11,11 @@ namespace NiORM.Mongo
     public class DataCore
     {
         private string ConnectionString { get; init; }
-        public DataCore(string ConnectionString)
+        private string DatabaseName { get; init; }
+        public DataCore(string ConnectionString, string DatabaseName)
         {
             this.ConnectionString = ConnectionString;
+            this.DatabaseName = DatabaseName;
         }
 
         [Obsolete]
@@ -24,7 +26,7 @@ namespace NiORM.Mongo
 
         public Entities<T> CreateEntity<T>() where T : MongoCollection, new()
         {
-            return new Entities<T>(ConnectionString);
+            return new Entities<T>(ConnectionString,DatabaseName);
         }
     }
 }

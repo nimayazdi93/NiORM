@@ -1,2 +1,2 @@
 # NiORM
-A new ORM base on Objects and already provided Tables 
+Introducing our new ORM nuget package, the ultimate solution for your data management needs! With the ability to connect seamlessly to both SQL Server and MongoDB, you can now easily handle your data across multiple platforms without any hassle. Our ORM allows you to effortlessly access your existing SQL Server tables and provides you with a flexible and powerful framework to work with MongoDB databases. With its user-friendly interface and efficient performance, our ORM is the perfect choice for developers looking to simplify their data management process. So why wait? Download our ORM nuget package today and take your data management to the next level!

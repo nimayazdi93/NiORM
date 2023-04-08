@@ -4,8 +4,7 @@ using NiORM.Mongo.Interfaces;
 namespace NiORM.Mongo.Core
 {
     public class Entities<T> : Interfaces.IEntities<T> where T : MongoCollection, new()
-    { 
-        private string DatabaseName { get; set; }
+    {  
         private string GetCollectionName()
         {
             T entity = new T();
@@ -34,10 +33,11 @@ namespace NiORM.Mongo.Core
         private MongoClient client { get; set; } 
         private IMongoDatabase mongodatabase { get; set; }
         private IMongoCollection<T> mongoCollection { get; set; }
-        public Entities(string connectionString)
+        public Entities(string connectionString, string databaseName)
         {
             client = new MongoClient(connectionString);
-            mongodatabase = client.GetDatabase(DatabaseName);
+
+            mongodatabase = client.GetDatabase(databaseName);
             mongoCollection = mongodatabase.GetCollection<T>(CollectionName);
         }
         public bool Add(T entity)
