@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NiORM.Core
+namespace NiORM.SQLServer.Core
 {
     /// <summary>
     /// For Describe Features Of PrimaryKey

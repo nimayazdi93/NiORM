@@ -1,4 +1,4 @@
-﻿namespace NiORM.Interfaces
+﻿namespace NiORM.SQLServer.Interfaces
 {
     public interface IUpdatable
     {

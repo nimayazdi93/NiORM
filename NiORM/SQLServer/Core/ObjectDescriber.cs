@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Reflection;
 
-namespace NiORM.Core
+namespace NiORM.SQLServer.Core
 {
     public static class ObjectDescriber<T, TValue> where T : new()
     {

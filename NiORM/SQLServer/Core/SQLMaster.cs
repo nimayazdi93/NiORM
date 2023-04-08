@@ -1,6 +1,6 @@
 ﻿using System.Data.SqlClient;
 
-namespace NiORM.Core
+namespace NiORM.SQLServer.Core
 {
     public class SqlMaster<T> where T : new()
     {

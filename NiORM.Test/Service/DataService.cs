@@ -1,4 +1,5 @@
 ﻿using NiORM.Core;
+using NiORM.SQLServer;
 using NiORM.Test.Models;
 using System;
 using System.Collections.Generic;

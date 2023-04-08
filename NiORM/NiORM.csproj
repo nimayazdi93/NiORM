@@ -8,14 +8,14 @@
     <Title>A better way for connect to database base on declared classes and declared tables</Title>
     <Authors>Nima Yazdi</Authors>
     <Company>DESNA.IR</Company>
-    <Description>A new ORM base on Objects and already provided Tables </Description>
+    <Description>Introducing our new ORM nuget package, the ultimate solution for your data management needs! With the ability to connect seamlessly to both SQL Server and MongoDB, you can now easily handle your data across multiple platforms without any hassle. Our ORM allows you to effortlessly access your existing SQL Server tables and provides you with a flexible and powerful framework to work with MongoDB databases. With its user-friendly interface and efficient performance, our ORM is the perfect choice for developers looking to simplify their data management process. So why wait? Download our ORM nuget package today and take your data management to the next level!</Description>
     <PackageProjectUrl>https://github.com/nimayazdi93/NiORM</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/nimayazdi93/NiORM</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ORM;SQL;Object-Relation;</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>1.1.6</Version>
+    <Version>1.2.1</Version>
     <PackageReleaseNotes>this version includes some optimization in coding and uses  CustomeAttributes
 for finding a better way please see NiORM.Test project in github repository. </PackageReleaseNotes>
     <PackAsTool>False</PackAsTool>
@@ -32,6 +32,7 @@ for finding a better way please see NiORM.Test project in github repository. </P
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="2.19.1" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
   </ItemGroup>
 

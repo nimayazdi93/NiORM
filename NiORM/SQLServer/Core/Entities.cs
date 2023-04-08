@@ -1,12 +1,12 @@
-﻿using NiORM.Interfaces;
+﻿using NiORM.SQLServer.Interfaces;
 
-namespace NiORM.Core
+namespace NiORM.SQLServer.Core
 {
     /// <summary>
     /// An object for CRUD actions
     /// </summary>
     /// <typeparam name="T">Type Of Object related to table. It should be inherited from ITable</typeparam>
-    public class Entities<T> where T : ITable, new()
+    public class Entities<T>:IEntities<T> where T : ITable, new()
     {
         private string ConnectionString { get; init; }
         private SqlMaster<T> SqlMaster { get; init; }
@@ -212,7 +212,7 @@ namespace NiORM.Core
         /// </summary>
         /// <param name="entity">object we are editing</param>
         /// <exception cref="Exception"></exception>
-        public void Update(T entity)
+        public void Edit(T entity)
         {
             var Type = GetType();
 
@@ -253,5 +253,13 @@ namespace NiORM.Core
                             WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
             SqlMaster.Execute(Query);
         }
+
+        public List<T> List()
+        {
+           return this.ToList();
+        }
+
+       
+ 
     }
 }
