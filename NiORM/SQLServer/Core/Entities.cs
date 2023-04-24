@@ -157,7 +157,7 @@ namespace NiORM.SQLServer.Core
         /// </summary>
         /// <param name="entity">object we are adding</param>
         /// <exception cref="Exception"></exception>
-        public void Add(T entity)
+        public T Add(T entity)
         {
 
             var Type = GetType();
@@ -201,10 +201,12 @@ namespace NiORM.SQLServer.Core
 
             SqlMaster.Execute(Query);
 
-            //var id = 0;
-            //var primaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
-            //entity = this.Query($"SELECT  {primaryKeys.FirstOrDefault()} FROM {this.TableName} ORDER BY {string.Join(",",primaryKeys)} DESC").FirstOrDefault();
-            //return ObjectDescriber<T, int>.GetValue(entity, primaryKeys.FirstOrDefault());
+             var id = "";
+             var primaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
+             entity = this.Query($"SELECT  * FROM {this.TableName} ORDER BY {string.Join(",",primaryKeys)} DESC").FirstOrDefault();
+
+            return entity;
+            
         }
 
         /// <summary>
@@ -239,6 +241,8 @@ namespace NiORM.SQLServer.Core
                            WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
 
             SqlMaster.Execute(Query);
+         
+
         }
 
         /// <summary>

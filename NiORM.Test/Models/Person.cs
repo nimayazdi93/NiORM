@@ -1,5 +1,5 @@
-﻿using NiORM.Attributes;
-using NiORM.Interfaces;
+﻿using NiORM.Attributes; 
+using NiORM.SQLServer.Interfaces;
 
 namespace NiORM.Test.Models
 {
