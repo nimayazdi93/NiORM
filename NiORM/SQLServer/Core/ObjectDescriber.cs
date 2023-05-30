@@ -12,7 +12,7 @@ namespace NiORM.SQLServer.Core
 
             var objectType = entity.GetType();
             var Keys = GetPrimaryKeyDetails(entity);
-            var ListOfPropertyInfo = new List<PropertyInfo>(objectType.GetProperties()).ToList();
+            var ListOfPropertyInfo = new List<PropertyInfo>(objectType.GetProperties()).Where(c=>c.CanWrite).ToList();
 
             var properties = ListOfPropertyInfo.Select(c => c.Name);
             
