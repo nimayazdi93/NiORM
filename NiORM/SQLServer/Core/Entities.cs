@@ -190,11 +190,11 @@ namespace NiORM.SQLServer.Core
         }
 
         /// <summary>
-        /// A method for adding a row
+        /// A method for adding a row and return it entirely
         /// </summary>
         /// <param name="entity">object we are adding</param>
         /// <exception cref="Exception"></exception>
-        public T Add(T entity)
+        public T AddReturn(T entity)
         {
 
             var Type = GetType();
@@ -244,6 +244,50 @@ namespace NiORM.SQLServer.Core
 
             return entity;
             
+        }
+
+        public void Add(T entity)
+        {
+            var Type = GetType();
+            if (entity is IView)
+            {
+                throw new Exception($"type: {Type} can't be added or edited because it's just View");
+            }
+            if (entity is IUpdatable updatable)
+            {
+                updatable.CreatedDateTime = DateTime.Now;
+                updatable.UpdatedDateTime = DateTime.Now;
+                entity = (T)updatable;
+            }
+
+            var ListOfProperties = ObjectDescriber<T, int>
+                                   .GetProperties(entity)
+                                   .ToList();
+            var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
+            PrimaryKeysDetails.ForEach((pk) =>
+            {
+                if (pk.IsAutoIncremental)
+                {
+                    ListOfProperties.Remove(pk.Name);
+                }
+                else
+                {
+                    ListOfProperties.Add(pk.Name);
+                }
+            });
+
+            ListOfProperties = ListOfProperties.Distinct().ToList();
+
+            var Query = $@"INSERT INTO {this.TableName} 
+                           (
+                            {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
+                            )
+                            Values
+                            (
+                             {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.ToSqlFormat(entity, c)).ToList())}
+                             )";
+
+            SqlMaster.Execute(Query);
         }
 
         /// <summary>
