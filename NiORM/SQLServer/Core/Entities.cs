@@ -1,4 +1,5 @@
 ﻿using NiORM.SQLServer.Interfaces;
+using System.Linq.Expressions;
 
 namespace NiORM.SQLServer.Core
 {
@@ -131,11 +132,7 @@ namespace NiORM.SQLServer.Core
         {
             return SqlMaster.Get($"SELECT * FROM {this.TableName} WHERE {Query}").ToList();
         }
-
-        public List<T> Where(Func<T, bool> Predict)
-        {
-            return ToList().Where(Predict).ToList();
-        }
+         
         /// <summary>
         /// A extension for linq's WHERE
         /// </summary>
@@ -145,6 +142,46 @@ namespace NiORM.SQLServer.Core
         {
             return List($" [{Predict.Item1}]='{Predict.Item2}'").ToList();
 
+        }
+        /// <summary>
+        /// A extension for linq's WHERE
+        /// </summary>
+        /// <param name="Predict">A dictionary for predict</param>
+        /// <returns></returns>
+        public List<T> Where(Expression<Func<T, bool>> predicate)
+        {
+            var Query = ExpressionToString(predicate.Body);
+            return List(Query);
+        }
+
+        private string ExpressionToString(Expression expression)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.Equal:
+                    var binaryExpr = (BinaryExpression)expression;
+                    return $"{ExpressionToString(binaryExpr.Left)} = {ExpressionToString(binaryExpr.Right)}";
+
+                case ExpressionType.AndAlso:
+                    binaryExpr = (BinaryExpression)expression;
+                    return $"({ExpressionToString(binaryExpr.Left)} AND {ExpressionToString(binaryExpr.Right)})";
+
+                case ExpressionType.OrElse:
+                    binaryExpr = (BinaryExpression)expression;
+                    return $"({ExpressionToString(binaryExpr.Left)} OR {ExpressionToString(binaryExpr.Right)})";
+
+                case ExpressionType.MemberAccess:
+                    var memberExpr = (MemberExpression)expression;
+                    return memberExpr.Member.Name;
+
+                case ExpressionType.Constant:
+                    var constExpr = (ConstantExpression)expression;
+                    var constExprString=ObjectDescriber<T,int>.ConvertToSqlFormat(constExpr.Value);
+                    return constExprString;
+
+                default:
+                    throw new NotSupportedException($"Operation {expression.NodeType} is not supported.");
+            }
         }
 
         private string GetType()

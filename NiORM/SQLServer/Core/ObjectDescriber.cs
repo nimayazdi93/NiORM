@@ -176,7 +176,7 @@ namespace NiORM.SQLServer.Core
             return Type.GetTypeCode(type);
         }
 
-        private static string ConvertToSqlFormat(object? Value)
+        internal static string ConvertToSqlFormat(object? Value)
         {
             if (Value == null)
                 return "null";
