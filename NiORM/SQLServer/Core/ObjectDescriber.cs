@@ -99,6 +99,19 @@ namespace NiORM.SQLServer.Core
                     var underlyingTypeCode = GetTypeCode(underlyingType);
                     switch (underlyingTypeCode)
                     {
+                        case TypeCode.Byte:
+                            propertyInfo.SetValue(entity, (Byte?)null);
+                            return;
+                        case TypeCode.SByte:
+                            propertyInfo.SetValue(entity, (SByte?)null);
+                            return;
+                        case TypeCode.Char:
+                            propertyInfo.SetValue(entity, (Char?)null);
+                            return;
+
+                        case TypeCode.Int16:
+                            propertyInfo.SetValue(entity, (Int16?)null);
+                            return;
                         case TypeCode.Int32:
                             propertyInfo.SetValue(entity, (int?)null);
                             return;
@@ -133,6 +146,19 @@ namespace NiORM.SQLServer.Core
                     var type = GetTypeCode(propertyType);
                     switch (type)
                     {
+                        case TypeCode.Byte:
+                            propertyInfo.SetValue(entity, Byte.Parse(Value.ToString()));
+                            return;
+                        case TypeCode.SByte:
+                            propertyInfo.SetValue(entity, SByte.Parse(Value.ToString()));
+                            return;
+                        case TypeCode.Char:
+                            propertyInfo.SetValue(entity, Char.Parse(Value.ToString()));
+                            return;
+
+                        case TypeCode.Int16:
+                            propertyInfo.SetValue(entity, Int16.Parse(Value.ToString()));
+                            return;
                         case TypeCode.Int32:
                             propertyInfo.SetValue(entity, int.Parse(Value.ToString()));
                             return;
@@ -180,9 +206,9 @@ namespace NiORM.SQLServer.Core
         {
             if (Value == null)
                 return "null";
-            if (Value is string)
+            if (Value is string | Value is char)
                 return $"N'{Value}'";
-            if (Value is int | Value is float | Value is long | Value is double)
+            if (Value is int | Value is float | Value is long | Value is double | Value is Byte | Value is Int16 | Value is Int64 | Value is SByte )
                 return Value.ToString();
             if (Value is DateTime time)
                 return $"'{time:yyyy-MM-dd HH:mm:ss.ss}'";
