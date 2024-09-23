@@ -14,6 +14,8 @@ person = dataService.People.Add(person);
 
 person = dataService.People.FirstOrDefault();
 
+people = dataService.People.Where(c => c.Name == "Nima" && c.Age==30).ToList();
+
 //for edit the person
 person.Age = 30;
 dataService.People.Edit(person);
