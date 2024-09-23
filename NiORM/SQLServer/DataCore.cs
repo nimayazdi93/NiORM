@@ -21,5 +21,12 @@ namespace NiORM.SQLServer
         {
             return new Entities<T>(ConnectionString);
         }
+
+        public List<T> SqlRaw<T>(string Query) where T : new()
+        {
+            SqlMaster<T> sqlMaster = new SqlMaster<T>(ConnectionString);
+           List<T> result= sqlMaster.Get(Query);
+            return result;
+        }
     }
 }
