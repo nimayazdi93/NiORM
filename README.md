@@ -9,13 +9,22 @@
 - **Multiple Database Support**: Handle multiple databases within the same project.
 
 ## Installation
-Clone the repository and include the NiORM project in your solution. Ensure that you have the necessary SQL Server dependencies installed.
-```git clone https://github.com/your-repo/NiORM.git```
+Download & Install the nuget using:
+
+Nuget Package Manager:
+
+```NuGet\Install-Package NiORM -Version 1.3.2```
+
+.Net CLI:
+
+```dotnet add package NiORM --version 1.3.2```
+
+
 
 ## Quick Start
 Here’s how you can get started with NiORM in your application:
 
-##### 1. Define a Model:
+#### 1. Define a Model:
 
 Use attributes like ```[TableName]``` and ```[PrimaryKey]``` to map a ```C#``` class to a database table.
 
@@ -32,7 +41,7 @@ public class Person : ITable
     public int Age { get; set; }
 }
 ```
-##### 2. Set up a Data Service:
+#### 2. Set up a Data Service:
 
 Create a service class that inherits from DataCore. This class will act as the interface between your application and the database.
 
@@ -47,7 +56,7 @@ public class DataService : DataCore
     public Entities<Person> People => CreateEntity<Person>();
 }
 ```
-##### 3. Interact with the Database:
+#### 3. Interact with the Database:
 
 Use the data service to fetch, insert, update, and delete records.
 
@@ -64,7 +73,7 @@ dataService.People.Add(newPerson);
 // Query with conditions
 var filteredPeople = dataService.People.Where(p => p.Name == "Nima").ToList();
 ```
-##### 4. Execute Raw SQL (when necessary):
+#### 4. Execute Raw SQL (when necessary):
 
 If you need more control, you can execute raw SQL queries and map them to your models.
 
