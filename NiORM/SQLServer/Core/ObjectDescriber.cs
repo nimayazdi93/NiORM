@@ -6,7 +6,7 @@ namespace NiORM.SQLServer.Core
 {
     public static class ObjectDescriber<T, TValue> where T : new()
     {
-        public static List<string> GetProperties(T entity)
+        internal static List<string> GetProperties(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -19,7 +19,7 @@ namespace NiORM.SQLServer.Core
             return properties.ToList();
         }
 
-        public static List<string> GetPrimaryKeys(T entity)
+        internal static List<string> GetPrimaryKeys(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity)); 
 
@@ -29,7 +29,7 @@ namespace NiORM.SQLServer.Core
               .Any(customeAttribute => customeAttribute is PrimaryKey)).Select(c=>c.Name).ToList();
 
         }
-        public static List<PrimaryKeyDetails> GetPrimaryKeyDetails(T entity)
+        internal static List<PrimaryKeyDetails> GetPrimaryKeyDetails(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -41,7 +41,7 @@ namespace NiORM.SQLServer.Core
 
         }
 
-        public static string GetTableName(T entity)
+        internal static string GetTableName(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
             var entityType = entity.GetType();
@@ -65,7 +65,7 @@ namespace NiORM.SQLServer.Core
             throw new Exception($"class '{entityType.Name}' should have attribute 'TableName'");
         }
 
-        public static string ToSqlFormat(T entity, string Key)
+        internal static string ToSqlFormat(T entity, string Key)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -74,7 +74,7 @@ namespace NiORM.SQLServer.Core
             return ConvertToSqlFormat(Value);
         }
 
-        public static TValue GetValue(T entity, string Key)
+        internal static TValue GetValue(T entity, string Key)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -83,7 +83,7 @@ namespace NiORM.SQLServer.Core
             return (TValue)propertyInfoValue;
         }
 
-        public static void SetValue(T entity, string Key, TValue Value)
+        internal static void SetValue(T entity, string Key, TValue Value)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
             if (Value is null) throw new ArgumentNullException(nameof(entity));
@@ -196,7 +196,7 @@ namespace NiORM.SQLServer.Core
 
         }
 
-        public static TypeCode GetTypeCode(Type type)
+        internal static TypeCode GetTypeCode(Type type)
         {
             if (type == typeof(Enum)) return TypeCode.Int32;
             return Type.GetTypeCode(type);
