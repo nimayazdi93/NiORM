@@ -92,16 +92,8 @@ namespace NiORM.SQLServer.Core
 
         public List<T> ToList()
         {
-            var Properties = ObjectDescriber<T, string>.GetProperties(new T());
-            var Addition = "";
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
-
-            if (Properties.Any(c => c == "IsActive"))
-            {
-                Addition = $"ORDER BY IsActive DESC,{PrimaryKeys.FirstOrDefault()}";
-            }
-
-            return SqlMaster.Get($"SELECT * FROM {this.TableName} {Addition}").ToList();
+            var Properties = ObjectDescriber<T, string>.GetProperties(new T()); 
+            return SqlMaster.Get($"SELECT * FROM {this.TableName}").ToList();
         }
 
         /// <summary>
