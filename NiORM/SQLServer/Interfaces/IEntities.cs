@@ -4,7 +4,7 @@ namespace NiORM.SQLServer.Interfaces
 {
     public interface IEntities<T> where T : ITable
     {
-        List<T> List();
+        List<T> ToList();
         T AddReturn(T entity);
         void Add(T entity); 
         void Edit(T entity);
