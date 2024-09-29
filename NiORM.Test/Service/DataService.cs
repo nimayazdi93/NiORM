@@ -1,6 +1,7 @@
-﻿ 
+﻿
 using NiORM.SQLServer;
 using NiORM.SQLServer.Core;
+using NiORM.SQLServer.Interfaces;
 using NiORM.Test.Models;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,7 @@ namespace NiORM.Test.Service
         /// <param name="ConnectionString"></param>
         public DataService(string ConnectionString) : base(ConnectionString) { }
 
-        public Entities<Person> People => CreateEntity<Person>();
+        public IEntities<Person> People => CreateEntity<Person>();
 
     }
 }
