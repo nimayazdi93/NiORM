@@ -15,9 +15,8 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>ORM;SQL;Object-Relation;</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>1.3.5</Version>
-    <PackageReleaseNotes>this version includes some optimization in coding and uses  CustomeAttributes
-for finding a better way please see NiORM.Test project in github repository. </PackageReleaseNotes>
+    <Version>1.3.6</Version>
+    <PackageReleaseNotes>this version has some improvement in exception handling </PackageReleaseNotes>
     <PackAsTool>False</PackAsTool>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
