@@ -13,11 +13,11 @@ Download & Install the nuget using:
 
 Nuget Package Manager:
 
-```NuGet\Install-Package NiORM -Version 1.3.2```
+```NuGet\Install-Package NiORM -Version 1.3.7```
 
 .Net CLI:
 
-```dotnet add package NiORM --version 1.3.2```
+```dotnet add package NiORM --version 1.3.7```
 
 
 
@@ -53,7 +53,7 @@ public class DataService : DataCore
 {
     public DataService(string connectionString) : base(connectionString) { }
 
-    public Entities<Person> People => CreateEntity<Person>();
+    public IEntities<Person> People => CreateEntity<Person>();
 }
 ```
 #### 3. Interact with the Database:
