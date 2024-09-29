@@ -86,16 +86,16 @@ namespace NiORM.SQLServer.Core
         internal static void SetValue(T entity, string Key, TValue Value)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
-            if (Value is null) throw new ArgumentNullException(nameof(entity));
-
+            if (Value is null) throw new ArgumentNullException(nameof(Value));
+            
             try
             {
-                PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new ArgumentNullException(nameof(entity));
+                PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new Exception($"You don't have property with name : '{Key}' in '{entity.GetType().Name}' , but in the table '{GetTableName(entity)}' you have that column");
                 var propertyType = propertyInfo.PropertyType;
 
                 if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && Value.ToString() == string.Empty)
                 {
-                    var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? throw new ArgumentNullException(nameof(entity));
+                    var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? throw new ArgumentNullException(nameof(Key));
                     var underlyingTypeCode = GetTypeCode(underlyingType);
                     switch (underlyingTypeCode)
                     {
