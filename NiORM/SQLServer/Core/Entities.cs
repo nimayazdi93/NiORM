@@ -336,7 +336,9 @@ namespace NiORM.SQLServer.Core
            return this.ToList();
         }
 
-       
- 
+        public List<T> ToList(string whereQuery)
+        {
+            return List(whereQuery);
+        }
     }
 }

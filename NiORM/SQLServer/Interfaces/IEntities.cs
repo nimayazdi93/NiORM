@@ -5,6 +5,7 @@ namespace NiORM.SQLServer.Interfaces
     public interface IEntities<T> where T : ITable
     {
         List<T> ToList();
+        List<T> ToList(string whereQuery);
         T AddReturn(T entity);
         void Add(T entity); 
         void Edit(T entity);
