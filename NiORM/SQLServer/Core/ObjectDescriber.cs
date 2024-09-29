@@ -82,133 +82,88 @@ namespace NiORM.SQLServer.Core
             var propertyInfoValue = propertyInfo.GetValue(entity, null) ?? throw new ArgumentNullException(nameof(entity));
             return (TValue)propertyInfoValue;
         }
+         
 
         internal static void SetValue(T entity, string Key, TValue Value)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
             if (Value is null) throw new ArgumentNullException(nameof(Value));
-            
+
             try
             {
                 PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new Exception($"You don't have property with name : '{Key}' in '{entity.GetType().Name}' , but in the table '{GetTableName(entity)}' you have that column");
                 var propertyType = propertyInfo.PropertyType;
 
-                if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && Value.ToString() == string.Empty)
-                {
-                    var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? throw new ArgumentNullException(nameof(Key));
-                    if (underlyingType.IsEnum)
-                    {
-                        propertyInfo.SetValue(entity, null);
-                        return;
-                    }
-                    var underlyingTypeCode = GetTypeCode(underlyingType);
-                    switch (underlyingTypeCode)
-                    {
-                        case TypeCode.Byte:
-                            propertyInfo.SetValue(entity, (Byte?)null);
-                            return;
-                        case TypeCode.SByte:
-                            propertyInfo.SetValue(entity, (SByte?)null);
-                            return;
-                        case TypeCode.Char:
-                            propertyInfo.SetValue(entity, (Char?)null);
-                            return;
+                // بررسی برای nullable types
+                var isNullable = propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>);
+                var actualType = isNullable ? Nullable.GetUnderlyingType(propertyType) : propertyType;
 
-                        case TypeCode.Int16:
-                            propertyInfo.SetValue(entity, (Int16?)null);
-                            return;
-                        case TypeCode.Int32:
-                            propertyInfo.SetValue(entity, (int?)null);
-                            return;
-                        case TypeCode.Double:
-                            propertyInfo.SetValue(entity, (double?)null);
-                            return;
-                        case TypeCode.DateTime:
-                            propertyInfo.SetValue(entity, (DateTime?)null);
-                            return;
-                        case TypeCode.Int64:
-                            propertyInfo.SetValue(entity, (long?)null);
-                            return;
-                        case TypeCode.Single:
-                            propertyInfo.SetValue(entity, (float?)null);
-                            return;
-                        case TypeCode.String:
-                            propertyInfo.SetValue(entity, null);
-                            return;
-                        case TypeCode.Boolean:
-                            propertyInfo.SetValue(entity, (bool?)null);
-                            return;
-                        case TypeCode.Object:
-                            propertyInfo.SetValue(entity, null);
-                            return;
-                        default:
-                            propertyInfo.SetValue(entity, Value);
-                            return;
-                    }
+                if (isNullable && Value.ToString() == string.Empty)
+                {
+                    // تنظیم مقدار null برای nullable type ها
+                    propertyInfo.SetValue(entity, null);
+                    return;
                 }
-                else
+
+                if (actualType.IsEnum)
                 {
+                    // اگر نوع enum بود، مقدار را به int تبدیل و سپس به enum مرتبط تبدیل می‌کنیم
+                    var enumValue = Enum.ToObject(actualType, Convert.ToInt32(Value));
+                    propertyInfo.SetValue(entity, isNullable ? (object?)enumValue : enumValue);
+                    return;
+                }
 
+                var type = GetTypeCode(actualType);
 
-                    if (propertyType.IsEnum)
-                    {
-                        var enumValue = Enum.ToObject(propertyType, Convert.ToInt32(Value)); 
-                        propertyInfo.SetValue(entity, enumValue);
+                switch (type)
+                {
+                    case TypeCode.Byte:
+                        propertyInfo.SetValue(entity, Byte.Parse(Value.ToString()));
                         return;
-                    }
-
-                    var type = GetTypeCode(propertyType);
-                    switch (type)
-                    {
-                        case TypeCode.Byte:
-                            propertyInfo.SetValue(entity, Byte.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.SByte:
-                            propertyInfo.SetValue(entity, SByte.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Char:
-                            propertyInfo.SetValue(entity, Char.Parse(Value.ToString()));
-                            return;
-
-                        case TypeCode.Int16:
-                            propertyInfo.SetValue(entity, Int16.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Int32:
-                            propertyInfo.SetValue(entity, int.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Double:
-                            propertyInfo.SetValue(entity, double.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.DateTime:
-                            propertyInfo.SetValue(entity, DateTime.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Int64:
-                            propertyInfo.SetValue(entity, long.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Single:
-                            propertyInfo.SetValue(entity, float.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.String:
-                            propertyInfo.SetValue(entity, (Value.ToString()));
-                            return;
-                        case TypeCode.Boolean:
-                            propertyInfo.SetValue(entity, (Value.ToString() == "True"));
-                            return;
-                        case TypeCode.Object:
-                            propertyInfo.SetValue(entity, Value);
-                            return;
-                        default:
-                            propertyInfo.SetValue(entity, Value);
-                            return;
-                    }
+                    case TypeCode.SByte:
+                        propertyInfo.SetValue(entity, SByte.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Char:
+                        propertyInfo.SetValue(entity, Char.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Int16:
+                        propertyInfo.SetValue(entity, Int16.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Int32:
+                        propertyInfo.SetValue(entity, int.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Double:
+                        propertyInfo.SetValue(entity, double.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.DateTime:
+                        propertyInfo.SetValue(entity, DateTime.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Int64:
+                        propertyInfo.SetValue(entity, long.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Single:
+                        propertyInfo.SetValue(entity, float.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.String:
+                        propertyInfo.SetValue(entity, Value.ToString());
+                        return;
+                    case TypeCode.Boolean:
+                        propertyInfo.SetValue(entity, (Value.ToString() == "True"));
+                        return;
+                    case TypeCode.Object:
+                        propertyInfo.SetValue(entity, Value);
+                        return;
+                    default:
+                        propertyInfo.SetValue(entity, Value);
+                        return;
                 }
             }
             catch (Exception)
             {
                 throw;
             }
-
         }
+
 
         internal static TypeCode GetTypeCode(Type type)
         {
