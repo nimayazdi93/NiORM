@@ -96,6 +96,11 @@ namespace NiORM.SQLServer.Core
                 if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && Value.ToString() == string.Empty)
                 {
                     var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? throw new ArgumentNullException(nameof(Key));
+                    if (underlyingType.IsEnum)
+                    {
+                        propertyInfo.SetValue(entity, null);
+                        return;
+                    }
                     var underlyingTypeCode = GetTypeCode(underlyingType);
                     switch (underlyingTypeCode)
                     {
@@ -143,6 +148,15 @@ namespace NiORM.SQLServer.Core
                 }
                 else
                 {
+
+
+                    if (propertyType.IsEnum)
+                    {
+                        var enumValue = Enum.ToObject(propertyType, Convert.ToInt32(Value)); 
+                        propertyInfo.SetValue(entity, enumValue);
+                        return;
+                    }
+
                     var type = GetTypeCode(propertyType);
                     switch (type)
                     {
@@ -210,6 +224,10 @@ namespace NiORM.SQLServer.Core
                 return $"N'{Value}'";
             if (Value is int | Value is float | Value is long | Value is double | Value is Byte | Value is Int16 | Value is Int64 | Value is SByte )
                 return Value.ToString();
+            if(Value is Enum)
+            {
+                return ((int)Value).ToString();
+            }
             if (Value is DateTime time)
                 return $"'{time:yyyy-MM-dd HH:mm:ss.ss}'";
             if (Value is bool value)
