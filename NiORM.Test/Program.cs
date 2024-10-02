@@ -9,11 +9,17 @@ DataService dataService = new DataService("Data Source=(localdb)\\MSSQLLocalDB;I
 var people = dataService.People.ToList();
 
 //for add a new person
-var person = new Person() { Age = 29, Name = "Nima" };
-person = dataService.People.Add(person);
+var person = new Person() { Age = 29, Name = "Nima" , Marriage=Marriage.Single};
+dataService.People.Add(person);
 
-person = dataService.People.FirstOrDefault();
+person = dataService.People.Find(1);
 
+people = dataService.People.Where(c => c.Name == "Nima" && c.Age==30).ToList();
+
+
+var cats = dataService.SqlRaw<Cat>("select * from Cats");
+
+Console.ReadLine();
 //for edit the person
 person.Age = 30;
 dataService.People.Edit(person);

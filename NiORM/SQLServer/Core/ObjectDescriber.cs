@@ -6,7 +6,7 @@ namespace NiORM.SQLServer.Core
 {
     public static class ObjectDescriber<T, TValue> where T : new()
     {
-        public static List<string> GetProperties(T entity)
+        internal static List<string> GetProperties(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -19,7 +19,7 @@ namespace NiORM.SQLServer.Core
             return properties.ToList();
         }
 
-        public static List<string> GetPrimaryKeys(T entity)
+        internal static List<string> GetPrimaryKeys(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity)); 
 
@@ -29,7 +29,7 @@ namespace NiORM.SQLServer.Core
               .Any(customeAttribute => customeAttribute is PrimaryKey)).Select(c=>c.Name).ToList();
 
         }
-        public static List<PrimaryKeyDetails> GetPrimaryKeyDetails(T entity)
+        internal static List<PrimaryKeyDetails> GetPrimaryKeyDetails(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -41,7 +41,7 @@ namespace NiORM.SQLServer.Core
 
         }
 
-        public static string GetTableName(T entity)
+        internal static string GetTableName(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
             var entityType = entity.GetType();
@@ -65,7 +65,7 @@ namespace NiORM.SQLServer.Core
             throw new Exception($"class '{entityType.Name}' should have attribute 'TableName'");
         }
 
-        public static string ToSqlFormat(T entity, string Key)
+        internal static string ToSqlFormat(T entity, string Key)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -74,7 +74,7 @@ namespace NiORM.SQLServer.Core
             return ConvertToSqlFormat(Value);
         }
 
-        public static TValue GetValue(T entity, string Key)
+        internal static TValue GetValue(T entity, string Key)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
@@ -82,108 +82,107 @@ namespace NiORM.SQLServer.Core
             var propertyInfoValue = propertyInfo.GetValue(entity, null) ?? throw new ArgumentNullException(nameof(entity));
             return (TValue)propertyInfoValue;
         }
+         
 
-        public static void SetValue(T entity, string Key, TValue Value)
+        internal static void SetValue(T entity, string Key, TValue Value)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity));
-            if (Value is null) throw new ArgumentNullException(nameof(entity));
+            if (Value is null) throw new ArgumentNullException(nameof(Value));
 
             try
             {
-                PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new ArgumentNullException(nameof(entity));
+                PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new Exception($"You don't have property with name : '{Key}' in '{entity.GetType().Name}' , but in the table '{GetTableName(entity)}' you have that column");
                 var propertyType = propertyInfo.PropertyType;
 
-                if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && Value.ToString() == string.Empty)
+                // بررسی برای nullable types
+                var isNullable = propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>);
+                var actualType = isNullable ? Nullable.GetUnderlyingType(propertyType) : propertyType;
+
+                if (isNullable && Value.ToString() == string.Empty)
                 {
-                    var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? throw new ArgumentNullException(nameof(entity));
-                    var underlyingTypeCode = GetTypeCode(underlyingType);
-                    switch (underlyingTypeCode)
-                    {
-                        case TypeCode.Int32:
-                            propertyInfo.SetValue(entity, (int?)null);
-                            return;
-                        case TypeCode.Double:
-                            propertyInfo.SetValue(entity, (double?)null);
-                            return;
-                        case TypeCode.DateTime:
-                            propertyInfo.SetValue(entity, (DateTime?)null);
-                            return;
-                        case TypeCode.Int64:
-                            propertyInfo.SetValue(entity, (long?)null);
-                            return;
-                        case TypeCode.Single:
-                            propertyInfo.SetValue(entity, (float?)null);
-                            return;
-                        case TypeCode.String:
-                            propertyInfo.SetValue(entity, null);
-                            return;
-                        case TypeCode.Boolean:
-                            propertyInfo.SetValue(entity, (bool?)null);
-                            return;
-                        case TypeCode.Object:
-                            propertyInfo.SetValue(entity, null);
-                            return;
-                        default:
-                            propertyInfo.SetValue(entity, Value);
-                            return;
-                    }
+                    // تنظیم مقدار null برای nullable type ها
+                    propertyInfo.SetValue(entity, null);
+                    return;
                 }
-                else
+
+                if (actualType.IsEnum)
                 {
-                    var type = GetTypeCode(propertyType);
-                    switch (type)
-                    {
-                        case TypeCode.Int32:
-                            propertyInfo.SetValue(entity, int.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Double:
-                            propertyInfo.SetValue(entity, double.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.DateTime:
-                            propertyInfo.SetValue(entity, DateTime.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Int64:
-                            propertyInfo.SetValue(entity, long.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.Single:
-                            propertyInfo.SetValue(entity, float.Parse(Value.ToString()));
-                            return;
-                        case TypeCode.String:
-                            propertyInfo.SetValue(entity, (Value.ToString()));
-                            return;
-                        case TypeCode.Boolean:
-                            propertyInfo.SetValue(entity, (Value.ToString() == "True"));
-                            return;
-                        case TypeCode.Object:
-                            propertyInfo.SetValue(entity, Value);
-                            return;
-                        default:
-                            propertyInfo.SetValue(entity, Value);
-                            return;
-                    }
+                    // اگر نوع enum بود، مقدار را به int تبدیل و سپس به enum مرتبط تبدیل می‌کنیم
+                    var enumValue = Enum.ToObject(actualType, Convert.ToInt32(Value));
+                    propertyInfo.SetValue(entity, isNullable ? (object?)enumValue : enumValue);
+                    return;
+                }
+
+                var type = GetTypeCode(actualType);
+
+                switch (type)
+                {
+                    case TypeCode.Byte:
+                        propertyInfo.SetValue(entity, Byte.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.SByte:
+                        propertyInfo.SetValue(entity, SByte.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Char:
+                        propertyInfo.SetValue(entity, Char.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Int16:
+                        propertyInfo.SetValue(entity, Int16.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Int32:
+                        propertyInfo.SetValue(entity, int.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Double:
+                        propertyInfo.SetValue(entity, double.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.DateTime:
+                        propertyInfo.SetValue(entity, DateTime.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Int64:
+                        propertyInfo.SetValue(entity, long.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.Single:
+                        propertyInfo.SetValue(entity, float.Parse(Value.ToString()));
+                        return;
+                    case TypeCode.String:
+                        propertyInfo.SetValue(entity, Value.ToString());
+                        return;
+                    case TypeCode.Boolean:
+                        propertyInfo.SetValue(entity, (Value.ToString() == "True"));
+                        return;
+                    case TypeCode.Object:
+                        propertyInfo.SetValue(entity, Value);
+                        return;
+                    default:
+                        propertyInfo.SetValue(entity, Value);
+                        return;
                 }
             }
             catch (Exception)
             {
                 throw;
             }
-
         }
 
-        public static TypeCode GetTypeCode(Type type)
+
+        internal static TypeCode GetTypeCode(Type type)
         {
             if (type == typeof(Enum)) return TypeCode.Int32;
             return Type.GetTypeCode(type);
         }
 
-        private static string ConvertToSqlFormat(object? Value)
+        internal static string ConvertToSqlFormat(object? Value)
         {
             if (Value == null)
                 return "null";
-            if (Value is string)
+            if (Value is string | Value is char)
                 return $"N'{Value}'";
-            if (Value is int | Value is float | Value is long | Value is double)
+            if (Value is int | Value is float | Value is long | Value is double | Value is Byte | Value is Int16 | Value is Int64 | Value is SByte )
                 return Value.ToString();
+            if(Value is Enum)
+            {
+                return ((int)Value).ToString();
+            }
             if (Value is DateTime time)
                 return $"'{time:yyyy-MM-dd HH:mm:ss.ss}'";
             if (Value is bool value)

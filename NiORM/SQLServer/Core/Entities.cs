@@ -1,4 +1,5 @@
 ﻿using NiORM.SQLServer.Interfaces;
+using System.Linq.Expressions;
 
 namespace NiORM.SQLServer.Core
 {
@@ -91,16 +92,8 @@ namespace NiORM.SQLServer.Core
 
         public List<T> ToList()
         {
-            var Properties = ObjectDescriber<T, string>.GetProperties(new T());
-            var Addition = "";
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
-
-            if (Properties.Any(c => c == "IsActive"))
-            {
-                Addition = $"ORDER BY IsActive DESC,{PrimaryKeys.FirstOrDefault()}";
-            }
-
-            return SqlMaster.Get($"SELECT * FROM {this.TableName} {Addition}").ToList();
+            var Properties = ObjectDescriber<T, string>.GetProperties(new T()); 
+            return SqlMaster.Get($"SELECT * FROM {this.TableName}").ToList();
         }
 
         /// <summary>
@@ -131,11 +124,7 @@ namespace NiORM.SQLServer.Core
         {
             return SqlMaster.Get($"SELECT * FROM {this.TableName} WHERE {Query}").ToList();
         }
-
-        public List<T> Where(Func<T, bool> Predict)
-        {
-            return ToList().Where(Predict).ToList();
-        }
+         
         /// <summary>
         /// A extension for linq's WHERE
         /// </summary>
@@ -146,6 +135,46 @@ namespace NiORM.SQLServer.Core
             return List($" [{Predict.Item1}]='{Predict.Item2}'").ToList();
 
         }
+        /// <summary>
+        /// A extension for linq's WHERE
+        /// </summary>
+        /// <param name="Predict">A dictionary for predict</param>
+        /// <returns></returns>
+        public List<T> Where(Expression<Func<T, bool>> predicate)
+        {
+            var Query = ExpressionToString(predicate.Body);
+            return List(Query);
+        }
+
+        private string ExpressionToString(Expression expression)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.Equal:
+                    var binaryExpr = (BinaryExpression)expression;
+                    return $"{ExpressionToString(binaryExpr.Left)} = {ExpressionToString(binaryExpr.Right)}";
+
+                case ExpressionType.AndAlso:
+                    binaryExpr = (BinaryExpression)expression;
+                    return $"({ExpressionToString(binaryExpr.Left)} AND {ExpressionToString(binaryExpr.Right)})";
+
+                case ExpressionType.OrElse:
+                    binaryExpr = (BinaryExpression)expression;
+                    return $"({ExpressionToString(binaryExpr.Left)} OR {ExpressionToString(binaryExpr.Right)})";
+
+                case ExpressionType.MemberAccess:
+                    var memberExpr = (MemberExpression)expression;
+                    return memberExpr.Member.Name;
+
+                case ExpressionType.Constant:
+                    var constExpr = (ConstantExpression)expression;
+                    var constExprString=ObjectDescriber<T,int>.ConvertToSqlFormat(constExpr.Value);
+                    return constExprString;
+
+                default:
+                    throw new NotSupportedException($"Operation {expression.NodeType} is not supported.");
+            }
+        }
 
         private string GetType()
         {
@@ -153,11 +182,11 @@ namespace NiORM.SQLServer.Core
         }
 
         /// <summary>
-        /// A method for adding a row
+        /// A method for adding a row and return it entirely
         /// </summary>
         /// <param name="entity">object we are adding</param>
         /// <exception cref="Exception"></exception>
-        public T Add(T entity)
+        public T AddReturn(T entity)
         {
 
             var Type = GetType();
@@ -207,6 +236,50 @@ namespace NiORM.SQLServer.Core
 
             return entity;
             
+        }
+
+        public void Add(T entity)
+        {
+            var Type = GetType();
+            if (entity is IView)
+            {
+                throw new Exception($"type: {Type} can't be added or edited because it's just View");
+            }
+            if (entity is IUpdatable updatable)
+            {
+                updatable.CreatedDateTime = DateTime.Now;
+                updatable.UpdatedDateTime = DateTime.Now;
+                entity = (T)updatable;
+            }
+
+            var ListOfProperties = ObjectDescriber<T, int>
+                                   .GetProperties(entity)
+                                   .ToList();
+            var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
+            PrimaryKeysDetails.ForEach((pk) =>
+            {
+                if (pk.IsAutoIncremental)
+                {
+                    ListOfProperties.Remove(pk.Name);
+                }
+                else
+                {
+                    ListOfProperties.Add(pk.Name);
+                }
+            });
+
+            ListOfProperties = ListOfProperties.Distinct().ToList();
+
+            var Query = $@"INSERT INTO {this.TableName} 
+                           (
+                            {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
+                            )
+                            Values
+                            (
+                             {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.ToSqlFormat(entity, c)).ToList())}
+                             )";
+
+            SqlMaster.Execute(Query);
         }
 
         /// <summary>
@@ -263,7 +336,9 @@ namespace NiORM.SQLServer.Core
            return this.ToList();
         }
 
-       
- 
+        public List<T> ToList(string whereQuery)
+        {
+            return List(whereQuery);
+        }
     }
 }
