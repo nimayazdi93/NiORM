@@ -21,6 +21,7 @@ namespace NiORM.SQLServer.Interfaces
         T FirstOrDefault();
         void Execute(string Query);
         List<T> List();
+        List<T> List(string Query);
 
     }
 }
