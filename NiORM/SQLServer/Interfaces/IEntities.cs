@@ -19,6 +19,8 @@ namespace NiORM.SQLServer.Interfaces
         T Find(string id);
         T FirstOrDefault(string Query);
         T FirstOrDefault();
+        void Execute(string Query);
+        List<T> List();
 
     }
 }
