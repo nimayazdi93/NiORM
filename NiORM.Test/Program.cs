@@ -19,6 +19,8 @@ people = dataService.People.Where(c => c.Name == "Nima" && c.Age==30).ToList();
 
 var cats = dataService.SqlRaw<Cat>("select * from Cats");
 
+var Names = dataService.SqlRaw<string>("select [Name] from Cats");
+
 Console.ReadLine();
 //for edit the person
 person.Age = 30;
