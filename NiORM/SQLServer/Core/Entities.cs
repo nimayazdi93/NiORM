@@ -223,18 +223,14 @@ namespace NiORM.SQLServer.Core
                            (
                             {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
                             )
+                            OUTPUT inserted.*
                             Values
                             (
                              {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.ToSqlFormat(entity, c)).ToList())}
                              )";
 
-            SqlMaster.Execute(Query);
-
-             var id = "";
-             var primaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
-             entity = this.Query($"SELECT  * FROM {this.TableName} ORDER BY {string.Join(",",primaryKeys)} DESC").FirstOrDefault();
-
-            return entity;
+             var result = SqlMaster.Get(Query);
+            return result.FirstOrDefault();
             
         }
 
