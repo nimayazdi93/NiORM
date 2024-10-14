@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace NiORM.SQLServer.Core
 {
-    public static class ObjectDescriber<T, TValue> where T : new()
+    public static class ObjectDescriber<T, TValue>
     {
         internal static List<string> GetProperties(T entity)
         {
