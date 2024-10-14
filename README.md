@@ -13,11 +13,11 @@ Download & Install the nuget using:
 
 Nuget Package Manager:
 
-```NuGet\Install-Package NiORM -Version 1.3.7```
+```NuGet\Install-Package NiORM -Version```
 
 .Net CLI:
 
-```dotnet add package NiORM --version 1.3.7```
+```dotnet add package NiORM```
 
 
 
@@ -79,6 +79,12 @@ If you need more control, you can execute raw SQL queries and map them to your m
 
 ```
 var cats = dataService.SqlRaw<Cat>("SELECT * FROM Cats");
+```
+
+or
+
+```
+var names = dataService.SqlRaw<string>("SELECT [Name] FROM Cats");
 ```
 
 ## Contributing
