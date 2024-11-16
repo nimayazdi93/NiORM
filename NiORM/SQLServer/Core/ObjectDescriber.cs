@@ -91,26 +91,31 @@ namespace NiORM.SQLServer.Core
 
             try
             {
-                PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new Exception($"You don't have property with name : '{Key}' in '{entity.GetType().Name}' , but in the table '{GetTableName(entity)}' you have that column");
+                PropertyInfo propertyInfo = entity.GetType().GetProperty(Key);
+                    //throw new Exception($"You don't have property with name : '{Key}' in '{entity.GetType().Name}' , but in the table '{GetTableName(entity)}' you have that column")
+                if (propertyInfo is null)
+                {
+                    return;
+                }
                 var propertyType = propertyInfo.PropertyType;
-
-                // بررسی برای nullable types
+                 
                 var isNullable = propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>);
                 var actualType = isNullable ? Nullable.GetUnderlyingType(propertyType) : propertyType;
 
-                if (isNullable && Value.ToString() == string.Empty)
-                {
-                    // تنظیم مقدار null برای nullable type ها
+                if (isNullable &&  string.IsNullOrEmpty(Value.ToString()))
+                { 
                     propertyInfo.SetValue(entity, null);
                     return;
                 }
 
-                if (actualType.IsEnum)
+                if (actualType != null)
                 {
-                    // اگر نوع enum بود، مقدار را به int تبدیل و سپس به enum مرتبط تبدیل می‌کنیم
-                    var enumValue = Enum.ToObject(actualType, Convert.ToInt32(Value));
-                    propertyInfo.SetValue(entity, isNullable ? (object?)enumValue : enumValue);
-                    return;
+                    if (actualType.IsEnum)
+                    {
+                        var enumValue = Enum.ToObject(actualType, Convert.ToInt32(Value));
+                        propertyInfo.SetValue(entity, isNullable ? (object?)enumValue : enumValue);
+                        return;
+                    }
                 }
 
                 var type = GetTypeCode(actualType);
