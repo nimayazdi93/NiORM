@@ -7,7 +7,7 @@ namespace NiORM.SQLServer.Core
     /// An object for CRUD actions
     /// </summary>
     /// <typeparam name="T">Type Of Object related to table. It should be inherited from ITable</typeparam>
-    public class Entities<T>:IEntities<T> where T : ITable, new()
+    public class Entities<T> : IEntities<T> where T : ITable, new()
     {
         private string ConnectionString { get; init; }
         private SqlMaster<T> SqlMaster { get; init; }
@@ -45,8 +45,9 @@ namespace NiORM.SQLServer.Core
             if (Keys.Count != 1)
                 throw new Exception("The count of arguments are not same as PrimaryKeys");
             var Entity = new T();
-            ObjectDescriber<T, int>.SetValue(Entity, Keys[0], int.Parse(id));
-            return SqlMaster.Get($"Select top(1) * from {this.TableName} where  [{Keys[0]}]= {ObjectDescriber<T, string>.ToSqlFormat(Entity, Keys[0])}").FirstOrDefault();
+            ObjectDescriber<T, string>.SetValue(Entity, Keys[0].Name, id);
+
+            return SqlMaster.Get($"Select top(1) * from {this.TableName} where  [{Keys[0].Name}]= {ObjectDescriber<T, string>.ToSqlFormat(Entity, Keys[0].Name)}").FirstOrDefault();
         }
 
         /// <summary>
@@ -66,7 +67,7 @@ namespace NiORM.SQLServer.Core
         /// <exception cref="Exception"></exception>
         public T Find(string firstId, string secondId)
         {
-            var Keys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
+            var Keys = ObjectDescriber<T, int>.GetPrimaryKeyNames(new T());
 
             if (Keys.Count != 2)
                 throw new Exception("The count of arguments are not same as PrimaryKeys");
@@ -92,7 +93,7 @@ namespace NiORM.SQLServer.Core
 
         public List<T> ToList()
         {
-            var Properties = ObjectDescriber<T, string>.GetProperties(new T()); 
+            var Properties = ObjectDescriber<T, string>.GetProperties(new T());
             return SqlMaster.Get($"SELECT * FROM {this.TableName}").ToList();
         }
 
@@ -124,7 +125,7 @@ namespace NiORM.SQLServer.Core
         {
             return SqlMaster.Get($"SELECT * FROM {this.TableName} WHERE {Query}").ToList();
         }
-         
+
         /// <summary>
         /// A extension for linq's WHERE
         /// </summary>
@@ -168,7 +169,7 @@ namespace NiORM.SQLServer.Core
 
                 case ExpressionType.Constant:
                     var constExpr = (ConstantExpression)expression;
-                    var constExprString=ObjectDescriber<T,int>.ConvertToSqlFormat(constExpr.Value);
+                    var constExprString = ObjectDescriber<T, int>.ConvertToSqlFormat(constExpr.Value);
                     return constExprString;
 
                 default:
@@ -202,7 +203,7 @@ namespace NiORM.SQLServer.Core
             }
 
             var ListOfProperties = ObjectDescriber<T, int>
-                                   .GetProperties(entity) 
+                                   .GetProperties(entity)
                                    .ToList();
             var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
             PrimaryKeysDetails.ForEach((pk) =>
@@ -229,9 +230,9 @@ namespace NiORM.SQLServer.Core
                              {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.ToSqlFormat(entity, c)).ToList())}
                              )";
 
-             var result = SqlMaster.Get(Query);
+            var result = SqlMaster.Get(Query);
             return result.FirstOrDefault();
-            
+
         }
 
         public void Add(T entity)
@@ -261,6 +262,7 @@ namespace NiORM.SQLServer.Core
                 else
                 {
                     ListOfProperties.Add(pk.Name);
+                   
                 }
             });
 
@@ -297,11 +299,11 @@ namespace NiORM.SQLServer.Core
                 entity = (T)updatable;
             }
             var ListOfProperties = ObjectDescriber<T, int>
-               .GetProperties(entity ).ToList();
+               .GetProperties(entity).ToList();
 
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeyNames(entity);
             var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
-            
+
             ListOfProperties.AddRange(PrimaryKeysDetails.Where(c => c.IsAutoIncremental == false).Select(c => c.Name).ToList());
             ListOfProperties = ListOfProperties.Distinct().ToList();
             ListOfProperties = ListOfProperties.Where(c => !PrimaryKeysDetails.Any(cc => cc.Name == c && cc.IsAutoIncremental == true)).ToList();
@@ -310,7 +312,7 @@ namespace NiORM.SQLServer.Core
                            WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
 
             SqlMaster.Execute(Query);
-         
+
 
         }
 
@@ -320,7 +322,7 @@ namespace NiORM.SQLServer.Core
         /// <param name="entity">object we are removing</param>
         public void Remove(T entity)
         {
-            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeys(entity);
+            var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeyNames(entity);
 
             var Query = $@"DELETE {this.TableName}  
                             WHERE {string.Join(" AND ", PrimaryKeys.Select(c => $" [{c}]= {ObjectDescriber<T, int>.ToSqlFormat(entity, c)}").ToList())}";
@@ -329,7 +331,7 @@ namespace NiORM.SQLServer.Core
 
         public List<T> List()
         {
-           return this.ToList();
+            return this.ToList();
         }
 
         public List<T> ToList(string whereQuery)
