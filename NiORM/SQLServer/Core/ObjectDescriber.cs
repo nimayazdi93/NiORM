@@ -1,6 +1,7 @@
 ﻿using NiORM.Attributes;
 using System.Diagnostics;
 using System.Reflection;
+using System.Reflection.Metadata;
 
 namespace NiORM.SQLServer.Core
 {
@@ -19,14 +20,18 @@ namespace NiORM.SQLServer.Core
             return properties.ToList();
         }
 
-        internal static List<string> GetPrimaryKeys(T entity)
+        internal static List<PropertyInfo> GetPrimaryKeys(T entity)
         {
             if (entity is null) throw new ArgumentNullException(nameof(entity)); 
 
             return entity.GetType().GetProperties()
               .Where(property =>
               property.GetCustomAttributes(true)
-              .Any(customeAttribute => customeAttribute is PrimaryKey)).Select(c=>c.Name).ToList();
+              .Any(customeAttribute => customeAttribute is PrimaryKey)).ToList();
+        }
+        internal static List<string> GetPrimaryKeyNames(T entity)
+        {
+            return GetPrimaryKeys(entity).Select(c => c.Name).ToList();
 
         }
         internal static List<PrimaryKeyDetails> GetPrimaryKeyDetails(T entity)
@@ -37,7 +42,7 @@ namespace NiORM.SQLServer.Core
               .SelectMany(property =>
               property.GetCustomAttributes(true)
               .Where(customeAttribute => customeAttribute is PrimaryKey)
-              .Select(customeAttribute => new PrimaryKeyDetails(property.Name, ((PrimaryKey)customeAttribute).IsAutoIncremental))).ToList();
+              .Select(customeAttribute => new PrimaryKeyDetails(property.Name, ((PrimaryKey)customeAttribute).IsAutoIncremental ))).ToList();
 
         }
 
@@ -79,7 +84,7 @@ namespace NiORM.SQLServer.Core
             if (entity is null) throw new ArgumentNullException(nameof(entity));
 
             PropertyInfo propertyInfo = entity.GetType().GetProperty(Key) ?? throw new ArgumentNullException(nameof(entity));
-            var propertyInfoValue = propertyInfo.GetValue(entity, null) ?? throw new ArgumentNullException(nameof(entity));
+            var propertyInfoValue = propertyInfo.GetValue(entity, null) ?? throw new ArgumentNullException(Key);
             return (TValue)propertyInfoValue;
         }
          
