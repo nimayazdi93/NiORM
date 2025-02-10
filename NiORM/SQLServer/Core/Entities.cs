@@ -210,7 +210,14 @@ namespace NiORM.SQLServer.Core
             {
                 if (pk.IsAutoIncremental)
                 {
-                    ListOfProperties.Remove(pk.Name);
+                    if (!pk.IsGUID)
+                    {
+                        ListOfProperties.Remove(pk.Name);
+                    }
+                    else
+                    {
+                        ObjectDescriber<T, string>.SetValue(entity, pk.Name, Guid.NewGuid().ToString());
+                    }
                 }
                 else
                 {
@@ -257,12 +264,18 @@ namespace NiORM.SQLServer.Core
             {
                 if (pk.IsAutoIncremental)
                 {
-                    ListOfProperties.Remove(pk.Name);
+                    if (!pk.IsGUID)
+                    {
+                        ListOfProperties.Remove(pk.Name);
+                    }
+                    else
+                    {
+                        ObjectDescriber<T, string>.SetValue(entity, pk.Name, Guid.NewGuid().ToString());
+                    }
                 }
                 else
                 {
-                    ListOfProperties.Add(pk.Name);
-                   
+                    ListOfProperties.Add(pk.Name);                   
                 }
             });
 

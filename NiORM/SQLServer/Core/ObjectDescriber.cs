@@ -42,7 +42,7 @@ namespace NiORM.SQLServer.Core
               .SelectMany(property =>
               property.GetCustomAttributes(true)
               .Where(customeAttribute => customeAttribute is PrimaryKey)
-              .Select(customeAttribute => new PrimaryKeyDetails(property.Name, ((PrimaryKey)customeAttribute).IsAutoIncremental ))).ToList();
+              .Select(customeAttribute => new PrimaryKeyDetails(property.Name, ((PrimaryKey)customeAttribute).IsAutoIncremental, ((PrimaryKey)customeAttribute).IsGUID))).ToList();
 
         }
 
@@ -104,8 +104,12 @@ namespace NiORM.SQLServer.Core
                 }
                 var propertyType = propertyInfo.PropertyType;
                  
-                var isNullable = propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>);
-                var actualType = isNullable ? Nullable.GetUnderlyingType(propertyType) : propertyType;
+                 var isNullable = (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                 || (propertyType == typeof(string) && propertyInfo.CustomAttributes.Any(a => a.AttributeType.Name == "NullableAttribute"));
+
+                var actualType = isNullable && propertyType != typeof(string) ? Nullable.GetUnderlyingType(propertyType) : propertyType;
+
+ 
 
                 if (isNullable &&  string.IsNullOrEmpty(Value.ToString()))
                 { 
@@ -162,7 +166,7 @@ namespace NiORM.SQLServer.Core
                         return;
                     case TypeCode.Object:
                         propertyInfo.SetValue(entity, Value);
-                        return;
+                        return; 
                     default:
                         propertyInfo.SetValue(entity, Value);
                         return;
