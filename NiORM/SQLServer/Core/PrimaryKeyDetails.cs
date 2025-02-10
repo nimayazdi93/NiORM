@@ -11,13 +11,15 @@ namespace NiORM.SQLServer.Core
     /// </summary>
     public class PrimaryKeyDetails
     {
-        public PrimaryKeyDetails(string name, bool isAutoIncremental=true )
+        public PrimaryKeyDetails(string name, bool isAutoIncremental=true, bool isGUID=false )
         {
             Name = name;
-            IsAutoIncremental = isAutoIncremental; 
+            IsAutoIncremental = isAutoIncremental;
+            IsGUID = isGUID;
         }
 
         public string Name { get; set; }
         public bool IsAutoIncremental { get; set; } 
+        public bool IsGUID { get; set; }
     }
 }
