@@ -15,8 +15,8 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>ORM;SQL;Object-Relation;</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>1.3.14</Version>
-    <PackageReleaseNotes>this version supports enum implementation </PackageReleaseNotes>
+    <Version>1.4.0</Version>
+    <PackageReleaseNotes>Major update: Added comprehensive error handling with custom exceptions, built-in logging system with configurable levels, enhanced XML documentation for better IntelliSense support, and improved SQL Server operations reliability.</PackageReleaseNotes>
     <PackAsTool>False</PackAsTool>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
