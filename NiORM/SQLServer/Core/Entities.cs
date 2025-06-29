@@ -4,17 +4,41 @@ using System.Linq.Expressions;
 namespace NiORM.SQLServer.Core
 {
     /// <summary>
-    /// An object for CRUD actions
+    /// An object for CRUD actions on database entities
     /// </summary>
-    /// <typeparam name="T">Type Of Object related to table. It should be inherited from ITable</typeparam>
+    /// <typeparam name="T">Type of object related to table. It should be inherited from ITable</typeparam>
     public class Entities<T> : IEntities<T> where T : ITable, new()
     {
         private string ConnectionString { get; init; }
         private SqlMaster<T> SqlMaster { get; init; }
-        public Entities(string ConnectionString)
+
+        /// <summary>
+        /// Initializes a new instance of the Entities class
+        /// </summary>
+        /// <param name="connectionString">The database connection string</param>
+        /// <exception cref="ArgumentNullException">Thrown when connection string is null or empty</exception>
+        /// <exception cref="NiORMException">Thrown when there's an error initializing the entity</exception>
+        public Entities(string connectionString)
         {
-            this.ConnectionString = ConnectionString;
-            SqlMaster = new SqlMaster<T>(ConnectionString);
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                var error = "Connection string cannot be null or empty";
+                NiORMLogger.LogError(error, "Entities.Constructor");
+                throw new ArgumentNullException(nameof(connectionString), error);
+            }
+
+            try
+            {
+                this.ConnectionString = connectionString;
+                SqlMaster = new SqlMaster<T>(connectionString);
+                NiORMLogger.LogDebug($"Entities<{typeof(T).Name}> initialized successfully", "Entities.Constructor");
+            }
+            catch (Exception ex)
+            {
+                var error = $"Failed to initialize Entities<{typeof(T).Name}>: {ex.Message}";
+                NiORMLogger.LogError(error, "Entities.Constructor", null, ex);
+                throw new NiORMException(error, ex, null, "Constructor");
+            }
         }
 
         private string TableName = ObjectDescriber<T, int>.GetTableName(new T());
@@ -33,21 +57,62 @@ namespace NiORM.SQLServer.Core
         public T FirstOrDefault(string Query) => SqlMaster.Get($"SELECT TOP(1) * FROM {TableName} WHERE {Query}").FirstOrDefault();
 
         /// <summary>
-        /// A method for find an object using its primary key (Just for tables with one PK)
+        /// Finds an entity using its primary key (only for tables with a single primary key)
         /// </summary>
-        /// <param name="id">Primary Key</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
+        /// <param name="id">The primary key value</param>
+        /// <returns>The entity if found, null otherwise</returns>
+        /// <exception cref="ArgumentNullException">Thrown when id is null or empty</exception>
+        /// <exception cref="NiORMValidationException">Thrown when the table doesn't have exactly one primary key</exception>
+        /// <exception cref="NiORMException">Thrown when there's an error during the find operation</exception>
         public T Find(string id)
         {
-            var Keys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                var error = "Primary key value cannot be null or empty";
+                NiORMLogger.LogError(error, "Entities.Find");
+                throw new ArgumentNullException(nameof(id), error);
+            }
 
-            if (Keys.Count != 1)
-                throw new Exception("The count of arguments are not same as PrimaryKeys");
-            var Entity = new T();
-            ObjectDescriber<T, string>.SetValue(Entity, Keys[0].Name, id);
+            try
+            {
+                NiORMLogger.LogDebug($"Finding {typeof(T).Name} with id: {id}", "Entities.Find");
+                
+                var Keys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
 
-            return SqlMaster.Get($"Select top(1) * from {this.TableName} where  [{Keys[0].Name}]= {ObjectDescriber<T, string>.ToSqlFormat(Entity, Keys[0].Name)}").FirstOrDefault();
+                if (Keys.Count != 1)
+                {
+                    var error = $"Table {typeof(T).Name} must have exactly one primary key for this Find method. Found {Keys.Count} primary keys.";
+                    NiORMLogger.LogError(error, "Entities.Find");
+                    throw new NiORMValidationException(error);
+                }
+
+                var Entity = new T();
+                ObjectDescriber<T, string>.SetValue(Entity, Keys[0].Name, id);
+
+                var query = $"SELECT TOP(1) * FROM {this.TableName} WHERE [{Keys[0].Name}] = {ObjectDescriber<T, string>.ToSqlFormat(Entity, Keys[0].Name)}";
+                var result = SqlMaster.Get(query).FirstOrDefault();
+                
+                if (result != null)
+                {
+                    NiORMLogger.LogInfo($"Successfully found {typeof(T).Name} with id: {id}", "Entities.Find", query);
+                }
+                else
+                {
+                    NiORMLogger.LogWarning($"No {typeof(T).Name} found with id: {id}", "Entities.Find", query);
+                }
+
+                return result;
+            }
+            catch (NiORMException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var error = $"Unexpected error while finding {typeof(T).Name} with id {id}: {ex.Message}";
+                NiORMLogger.LogError(error, "Entities.Find", null, ex);
+                throw new NiORMException(error, ex, null, "Find");
+            }
         }
 
         /// <summary>
@@ -242,55 +307,94 @@ namespace NiORM.SQLServer.Core
 
         }
 
+        /// <summary>
+        /// Adds a new entity to the database
+        /// </summary>
+        /// <param name="entity">The entity to add</param>
+        /// <exception cref="ArgumentNullException">Thrown when entity is null</exception>
+        /// <exception cref="NiORMValidationException">Thrown when trying to add a view entity</exception>
+        /// <exception cref="NiORMException">Thrown when there's an error during the add operation</exception>
         public void Add(T entity)
         {
-            var Type = GetType();
-            if (entity is IView)
+            if (entity == null)
             {
-                throw new Exception($"type: {Type} can't be added or edited because it's just View");
-            }
-            if (entity is IUpdatable updatable)
-            {
-                updatable.CreatedDateTime = DateTime.Now;
-                updatable.UpdatedDateTime = DateTime.Now;
-                entity = (T)updatable;
+                var error = "Entity cannot be null";
+                NiORMLogger.LogError(error, "Entities.Add");
+                throw new ArgumentNullException(nameof(entity), error);
             }
 
-            var ListOfProperties = ObjectDescriber<T, int>
-                                   .GetProperties(entity)
-                                   .ToList();
-            var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
-            PrimaryKeysDetails.ForEach((pk) =>
+            try
             {
-                if (pk.IsAutoIncremental)
+                NiORMLogger.LogDebug($"Adding new {typeof(T).Name} entity", "Entities.Add");
+
+                var Type = GetType();
+                if (entity is IView)
                 {
-                    if (!pk.IsGUID)
+                    var error = $"Entity type {Type} cannot be added because it's a view";
+                    NiORMLogger.LogError(error, "Entities.Add");
+                    throw new NiORMValidationException(error, entity);
+                }
+
+                // Set timestamps for updatable entities
+                if (entity is IUpdatable updatable)
+                {
+                    updatable.CreatedDateTime = DateTime.Now;
+                    updatable.UpdatedDateTime = DateTime.Now;
+                    entity = (T)updatable;
+                    NiORMLogger.LogDebug("Set CreatedDateTime and UpdatedDateTime for updatable entity", "Entities.Add");
+                }
+
+                var ListOfProperties = ObjectDescriber<T, int>
+                                       .GetProperties(entity)
+                                       .ToList();
+                var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
+                
+                // Handle primary key properties
+                PrimaryKeysDetails.ForEach((pk) =>
+                {
+                    if (pk.IsAutoIncremental)
                     {
-                        ListOfProperties.Remove(pk.Name);
+                        if (!pk.IsGUID)
+                        {
+                            ListOfProperties.Remove(pk.Name);
+                            NiORMLogger.LogDebug($"Removed auto-incremental primary key {pk.Name} from insert properties", "Entities.Add");
+                        }
+                        else
+                        {
+                            ObjectDescriber<T, string>.SetValue(entity, pk.Name, Guid.NewGuid().ToString());
+                            NiORMLogger.LogDebug($"Generated GUID for primary key {pk.Name}", "Entities.Add");
+                        }
                     }
                     else
                     {
-                        ObjectDescriber<T, string>.SetValue(entity, pk.Name, Guid.NewGuid().ToString());
+                        ListOfProperties.Add(pk.Name);
                     }
-                }
-                else
-                {
-                    ListOfProperties.Add(pk.Name);                   
-                }
-            });
+                });
 
-            ListOfProperties = ListOfProperties.Distinct().ToList();
+                ListOfProperties = ListOfProperties.Distinct().ToList();
 
-            var Query = $@"INSERT INTO {this.TableName} 
-                           (
-                            {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
-                            )
-                            Values
-                            (
-                             {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.ToSqlFormat(entity, c)).ToList())}
-                             )";
+                var Query = $@"INSERT INTO {this.TableName} 
+                               (
+                                {string.Join(",\n", ListOfProperties.Select(c => $"[{c}]").ToList())}
+                                )
+                                VALUES
+                                (
+                                 {string.Join(",\n", ListOfProperties.Select(c => ObjectDescriber<T, int>.ToSqlFormat(entity, c)).ToList())}
+                                 )";
 
-            SqlMaster.Execute(Query);
+                SqlMaster.Execute(Query);
+                NiORMLogger.LogInfo($"Successfully added {typeof(T).Name} entity", "Entities.Add", Query);
+            }
+            catch (NiORMException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var error = $"Unexpected error while adding {typeof(T).Name} entity: {ex.Message}";
+                NiORMLogger.LogError(error, "Entities.Add", null, ex);
+                throw new NiORMException(error, ex, null, "Add");
+            }
         }
 
         /// <summary>
