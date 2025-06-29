@@ -106,7 +106,7 @@ namespace NiORM.SQLServer.Interfaces
         /// Executes a custom SQL command (non-query)
         /// </summary>
         /// <param name="Query">The SQL command to execute</param>
-        void Execute(string Query);
+        int Execute(string Query);
 
         /// <summary>
         /// Retrieves all entities from the table
@@ -120,5 +120,27 @@ namespace NiORM.SQLServer.Interfaces
         /// <param name="Query">The WHERE clause query</param>
         /// <returns>A list of filtered entities</returns>
         List<T> List(string Query);
+
+        /// <summary>
+        /// Safe method to filter entities using multiple property-value conditions (SQL injection safe)
+        /// </summary>
+        /// <param name="conditions">Dictionary of column names and their values</param>
+        /// <returns>A list of filtered entities</returns>
+        List<T> WhereMultiple(Dictionary<string, object?> conditions);
+
+        /// <summary>
+        /// Safe method to find entities by a single property value (SQL injection safe)
+        /// </summary>
+        /// <param name="propertyName">The property name to filter by</param>
+        /// <param name="value">The value to search for</param>
+        /// <returns>A list of entities matching the criteria</returns>
+        List<T> FindByProperty(string propertyName, object? value);
+
+        /// <summary>
+        /// Safe method to get the first entity matching multiple conditions (SQL injection safe)
+        /// </summary>
+        /// <param name="conditions">Dictionary of column names and their values</param>
+        /// <returns>The first matching entity or null</returns>
+        T FirstOrDefaultMultiple(Dictionary<string, object?> conditions);
     }
 }

@@ -32,11 +32,12 @@ namespace NiORM.SQLServer.Core
         /// Executes a SELECT query and returns the results as a list of entities
         /// </summary>
         /// <param name="query">The SQL query to execute</param>
+        /// <param name="parameterHelper">Optional parameter helper for parameterized queries</param>
         /// <returns>A list of entities of type T</returns>
         /// <exception cref="NiORMException">Thrown when there's an error executing the query</exception>
         /// <exception cref="NiORMConnectionException">Thrown when there's a connection error</exception>
         /// <exception cref="NiORMMappingException">Thrown when there's an error mapping results to entities</exception>
-        public List<T> Get(string query)
+        public List<T> Get(string query, SqlParameterHelper? parameterHelper = null)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -45,7 +46,8 @@ namespace NiORM.SQLServer.Core
                 throw new NiORMException(error, query, "Get");
             }
 
-            NiORMLogger.LogDebug($"Executing GET query for {typeof(T).Name}", "SqlMaster.Get", query);
+            var debugQuery = parameterHelper?.GetDebugQuery(query) ?? query;
+            NiORMLogger.LogDebug($"Executing GET query for {typeof(T).Name}", "SqlMaster.Get", debugQuery);
 
             try
             {
@@ -59,11 +61,15 @@ namespace NiORM.SQLServer.Core
                 catch (Exception ex)
                 {
                     var error = $"Failed to open database connection: {ex.Message}";
-                    NiORMLogger.LogError(error, "SqlMaster.Get", query, ex);
+                    NiORMLogger.LogError(error, "SqlMaster.Get", debugQuery, ex);
                     throw new NiORMConnectionException(error, ex);
                 }
 
                 var command = new SqlCommand(query, sqlConnection);
+                
+                // Apply parameters if provided
+                parameterHelper?.ApplyParameters(command);
+
                 using SqlDataReader reader = command.ExecuteReader();
                 var result = new List<T>();
                 
@@ -101,7 +107,7 @@ namespace NiORM.SQLServer.Core
                                 }
                                 catch (Exception ex)
                                 {
-                                    NiORMLogger.LogWarning($"Failed to set property {schema[i].ColumnName}: {ex.Message}", "SqlMaster.Get", query);
+                                    NiORMLogger.LogWarning($"Failed to set property {schema[i].ColumnName}: {ex.Message}", "SqlMaster.Get", debugQuery);
                                 }
                             }
                             result.Add(record);
@@ -111,14 +117,14 @@ namespace NiORM.SQLServer.Core
                 catch (Exception ex)
                 {
                     var error = $"Error while reading query results: {ex.Message}";
-                    NiORMLogger.LogError(error, "SqlMaster.Get", query, ex);
+                    NiORMLogger.LogError(error, "SqlMaster.Get", debugQuery, ex);
                     throw new NiORMMappingException(error, ex);
                 }
 
                 reader.Close();
                 sqlConnection.Close();
                 
-                NiORMLogger.LogInfo($"Query executed successfully, returned {result.Count} records", "SqlMaster.Get", query);
+                NiORMLogger.LogInfo($"Query executed successfully, returned {result.Count} records", "SqlMaster.Get", debugQuery);
                 return result;
             }
             catch (NiORMException)
@@ -129,8 +135,8 @@ namespace NiORM.SQLServer.Core
             catch (Exception ex)
             {
                 var error = $"Unexpected error during query execution: {ex.Message}";
-                NiORMLogger.LogError(error, "SqlMaster.Get", query, ex);
-                throw new NiORMException(error, ex, query, "Get");
+                NiORMLogger.LogError(error, "SqlMaster.Get", debugQuery, ex);
+                throw new NiORMException(error, ex, debugQuery, "Get");
             }
         }
 
@@ -138,9 +144,11 @@ namespace NiORM.SQLServer.Core
         /// Executes a non-query SQL command (INSERT, UPDATE, DELETE, etc.)
         /// </summary>
         /// <param name="query">The SQL command to execute</param>
+        /// <param name="parameterHelper">Optional parameter helper for parameterized queries</param>
+        /// <returns>Number of rows affected</returns>
         /// <exception cref="NiORMException">Thrown when there's an error executing the command</exception>
         /// <exception cref="NiORMConnectionException">Thrown when there's a connection error</exception>
-        public void Execute(string query)
+        public int Execute(string query, SqlParameterHelper? parameterHelper = null)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -149,7 +157,8 @@ namespace NiORM.SQLServer.Core
                 throw new NiORMException(error, query, "Execute");
             }
 
-            NiORMLogger.LogDebug($"Executing command for {typeof(T).Name}", "SqlMaster.Execute", query);
+            var debugQuery = parameterHelper?.GetDebugQuery(query) ?? query;
+            NiORMLogger.LogDebug($"Executing command for {typeof(T).Name}", "SqlMaster.Execute", debugQuery);
 
             try
             {
@@ -163,15 +172,20 @@ namespace NiORM.SQLServer.Core
                 catch (Exception ex)
                 {
                     var error = $"Failed to open database connection: {ex.Message}";
-                    NiORMLogger.LogError(error, "SqlMaster.Execute", query, ex);
+                    NiORMLogger.LogError(error, "SqlMaster.Execute", debugQuery, ex);
                     throw new NiORMConnectionException(error, ex);
                 }
 
                 var command = new SqlCommand(query, sqlConnection);
+                
+                // Apply parameters if provided
+                parameterHelper?.ApplyParameters(command);
+
                 var rowsAffected = command.ExecuteNonQuery();
                 
                 sqlConnection.Close();
-                NiORMLogger.LogInfo($"Command executed successfully, {rowsAffected} rows affected", "SqlMaster.Execute", query);
+                NiORMLogger.LogInfo($"Command executed successfully, {rowsAffected} rows affected", "SqlMaster.Execute", debugQuery);
+                return rowsAffected;
             }
             catch (NiORMException)
             {
@@ -181,8 +195,8 @@ namespace NiORM.SQLServer.Core
             catch (Exception ex)
             {
                 var error = $"Unexpected error during command execution: {ex.Message}";
-                NiORMLogger.LogError(error, "SqlMaster.Execute", query, ex);
-                throw new NiORMException(error, ex, query, "Execute");
+                NiORMLogger.LogError(error, "SqlMaster.Execute", debugQuery, ex);
+                throw new NiORMException(error, ex, debugQuery, "Execute");
             }
         }
 

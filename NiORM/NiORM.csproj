@@ -15,8 +15,8 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>ORM;SQL;Object-Relation;</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>1.4.0</Version>
-    <PackageReleaseNotes>Major update: Added comprehensive error handling with custom exceptions, built-in logging system with configurable levels, enhanced XML documentation for better IntelliSense support, and improved SQL Server operations reliability.</PackageReleaseNotes>
+    <Version>1.5.0</Version>
+    <PackageReleaseNotes>SECURITY UPDATE v1.5.0: Complete SQL injection protection with parameterized queries, automatic security validation, safe alternative methods (WhereMultiple, FindByProperty), security logging, and comprehensive protection guide. All existing methods now secure by default!</PackageReleaseNotes>
     <PackAsTool>False</PackAsTool>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
