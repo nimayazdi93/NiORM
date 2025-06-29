@@ -7,6 +7,8 @@
 - **Query Simplification**: Chain LINQ-style queries for simple and advanced data filtering.
 - **Raw SQL Execution**: Execute raw SQL queries when needed, returning mapped objects.
 - **Multiple Database Support**: Handle multiple databases within the same project.
+- **🔐 SQL Injection Protection**: All methods use parameterized queries by default for maximum security.
+- **🆕 Security Validation**: Automatic detection and prevention of SQL injection attacks.
 - **🆕 Comprehensive Error Handling**: Custom exception classes for better error identification and handling.
 - **🆕 Built-in Logging System**: Configurable logging with multiple levels and output options.
 - **🆕 Enhanced XML Documentation**: Complete IntelliSense support with detailed examples and exception documentation.
@@ -59,9 +61,9 @@ public class DataService : DataCore
     public IEntities<Person> People => CreateEntity<Person>();
 }
 ```
-#### 3. Interact with the Database:
+#### 3. Interact with the Database (SQL Injection Safe):
 
-Use the data service to fetch, insert, update, and delete records.
+Use the data service to fetch, insert, update, and delete records. All operations are protected against SQL injection!
 
 ```
 var dataService = new DataService("your-connection-string-here");
@@ -69,30 +71,43 @@ var dataService = new DataService("your-connection-string-here");
 // Fetch all people
 var people = dataService.People.ToList();
 
-// Add a new person
-var newPerson = new Person() { Age = 29, Name = "Nima" };
-dataService.People.Add(newPerson);
+// Add a new person (safe!)
+var newPerson = new Person() { Age = 29, Name = "John'; DROP TABLE Users; --" };
+dataService.People.Add(newPerson); // This is completely safe!
 
-// Query with conditions
+// Safe queries with parameterized WHERE conditions
 var filteredPeople = dataService.People.Where(p => p.Name == "Nima").ToList();
-```
-#### 4. Execute Raw SQL (when necessary):
 
-If you need more control, you can execute raw SQL queries and map them to your models.
+// Safe multiple conditions
+var conditions = new Dictionary<string, object?>
+{
+    { "Name", "John'; DROP TABLE Users; --" }, // Safe!
+    { "Age", 25 }
+};
+var safePeople = dataService.People.WhereMultiple(conditions);
+
+// Safe property search
+var byName = dataService.People.FindByProperty("Name", userInput); // Always safe!
+```
+#### 4. Execute Raw SQL (when necessary - with security warnings):
+
+If you need more control, you can execute raw SQL queries. NiORM will automatically validate and warn about potential security issues.
 
 ```
+// ⚠️ Raw SQL (automatically validated for injection attempts)
 var cats = dataService.SqlRaw<Cat>("SELECT * FROM Cats");
+
+// ✅ Better: Use safe parameterized approach
+var paramHelper = new SqlParameterHelper();
+var nameParam = paramHelper.AddParameter("Fluffy");
+var safeCats = dataService.SqlRaw<Cat>($"SELECT * FROM Cats WHERE Name = {nameParam}");
 ```
 
-or
+**🚨 Important**: Always prefer safe methods like `FindByProperty()`, `WhereMultiple()`, and LINQ expressions over raw SQL!
 
-```
-var names = dataService.SqlRaw<string>("SELECT [Name] FROM Cats");
-```
+## 🔐 Security & Error Handling
 
-## 🆕 Error Handling and Logging
-
-NiORM now includes comprehensive error handling and logging capabilities:
+NiORM v1.5.0+ includes comprehensive SQL injection protection, error handling, and security logging:
 
 #### Enable Logging:
 
@@ -166,7 +181,9 @@ public class SafeDataService : DataCore
 }
 ```
 
-📖 **For detailed documentation, see:** [Error Handling and Logging Guide](./NiORM/SQLServer/ERROR_HANDLING_AND_LOGGING_GUIDE.md)
+📖 **For detailed documentation, see:** 
+- [🔐 SQL Injection Protection Guide](./NiORM/SQLServer/SQL_INJECTION_PROTECTION_GUIDE.md) - **Essential reading for secure usage!**
+- [Error Handling and Logging Guide](./NiORM/SQLServer/ERROR_HANDLING_AND_LOGGING_GUIDE.md)
 
 ## Contributing
 We welcome contributions! Please fork the repository and submit pull requests for any improvements or features you'd like to add.
