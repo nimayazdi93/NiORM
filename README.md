@@ -7,6 +7,9 @@
 - **Query Simplification**: Chain LINQ-style queries for simple and advanced data filtering.
 - **Raw SQL Execution**: Execute raw SQL queries when needed, returning mapped objects.
 - **Multiple Database Support**: Handle multiple databases within the same project.
+- **🆕 Comprehensive Error Handling**: Custom exception classes for better error identification and handling.
+- **🆕 Built-in Logging System**: Configurable logging with multiple levels and output options.
+- **🆕 Enhanced XML Documentation**: Complete IntelliSense support with detailed examples and exception documentation.
 
 ## Installation
 Download & Install the nuget using:
@@ -86,6 +89,84 @@ or
 ```
 var names = dataService.SqlRaw<string>("SELECT [Name] FROM Cats");
 ```
+
+## 🆕 Error Handling and Logging
+
+NiORM now includes comprehensive error handling and logging capabilities:
+
+#### Enable Logging:
+
+```csharp
+using NiORM.SQLServer.Core;
+
+// Enable logging to console
+NiORMLogger.IsEnabled = true;
+NiORMLogger.MinimumLogLevel = LogLevel.Info;
+
+// Or log to file
+NiORMLogger.LogFilePath = @"C:\logs\niorm.log";
+```
+
+#### Enhanced Error Handling:
+
+```csharp
+try
+{
+    var person = dataService.People.Find(123);
+}
+catch (NiORMValidationException ex)
+{
+    // Handle validation errors
+    Console.WriteLine($"Validation error: {ex.Message}");
+}
+catch (NiORMConnectionException ex)
+{
+    // Handle connection issues
+    Console.WriteLine($"Connection failed: {ex.Message}");
+}
+catch (NiORMException ex)
+{
+    // Handle other NiORM errors
+    Console.WriteLine($"Database error: {ex.Message}");
+    if (!string.IsNullOrEmpty(ex.SqlQuery))
+    {
+        Console.WriteLine($"Failed query: {ex.SqlQuery}");
+    }
+}
+```
+
+#### Safe Operations with Enhanced Service:
+
+```csharp
+public class SafeDataService : DataCore
+{
+    public SafeDataService(string connectionString) : base(connectionString)
+    {
+        // Configure logging
+        NiORMLogger.IsEnabled = true;
+        NiORMLogger.MinimumLogLevel = LogLevel.Warning;
+    }
+
+    public bool TryAddPerson(Person person, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+        try
+        {
+            People.Add(person);
+            return true;
+        }
+        catch (NiORMException ex)
+        {
+            errorMessage = ex.Message;
+            return false;
+        }
+    }
+
+    public IEntities<Person> People => CreateEntity<Person>();
+}
+```
+
+📖 **For detailed documentation, see:** [Error Handling and Logging Guide](./NiORM/SQLServer/ERROR_HANDLING_AND_LOGGING_GUIDE.md)
 
 ## Contributing
 We welcome contributions! Please fork the repository and submit pull requests for any improvements or features you'd like to add.
