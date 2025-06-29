@@ -47,7 +47,7 @@ namespace NiORM.SQLServer.Core
         /// A method for first row in table
         /// </summary>
         /// <returns></returns>
-        public T FirstOrDefault() => SqlMaster.Get(Query: $"SELECT TOP(1) * FROM {TableName}").FirstOrDefault();
+        public T FirstOrDefault() => SqlMaster.Get(query: $"SELECT TOP(1) * FROM {TableName}").FirstOrDefault();
 
         /// <summary>
         ///   A method for first row in table with conditions in TSQL
