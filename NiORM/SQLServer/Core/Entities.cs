@@ -405,6 +405,13 @@ namespace NiORM.SQLServer.Core
                     var constExprString = ObjectDescriber<T, int>.ConvertToSqlFormat(constExpr.Value);
                     return constExprString;
 
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
+                    // Handle type conversions (e.g., unwrapping nullable types like DateTime? to DateTime)
+                    // Just recursively process the inner expression
+                    var unaryExpr = (UnaryExpression)expression;
+                    return ExpressionToString(unaryExpr.Operand);
+
                 default:
                     throw new NotSupportedException($"Operation {expression.NodeType} is not supported.");
             }
@@ -483,6 +490,13 @@ namespace NiORM.SQLServer.Core
                 case ExpressionType.Constant:
                     var constExpr = (ConstantExpression)expression;
                     return ObjectDescriber<T, int>.ConvertToSqlFormat(constExpr.Value);
+
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
+                    // Handle type conversions (e.g., unwrapping nullable types)
+                    // Just recursively process the inner expression
+                    var unaryExpr = (UnaryExpression)expression;
+                    return BuildMemberPath(unaryExpr.Operand, skipValue);
 
                 default:
                     // For other expression types, recursively process them
