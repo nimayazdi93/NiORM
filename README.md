@@ -12,6 +12,7 @@
 - **🆕 Comprehensive Error Handling**: Custom exception classes for better error identification and handling.
 - **🆕 Built-in Logging System**: Configurable logging with multiple levels and output options.
 - **🆕 Enhanced XML Documentation**: Complete IntelliSense support with detailed examples and exception documentation.
+- **🆕 Enhanced LINQ Support**: Improved DateTime operations including `.Date` property support and nullable DateTime handling (v1.6.0-beta+).
 
 ## Installation
 Download & Install the nuget using:
@@ -88,6 +89,9 @@ var safePeople = dataService.People.WhereMultiple(conditions);
 
 // Safe property search
 var byName = dataService.People.FindByProperty("Name", userInput); // Always safe!
+
+// Date comparison (NEW in v1.6.0-beta)
+var todayPeople = dataService.People.Where(p => p.DateTime.Value.Date == DateTime.Now.Date).ToList();
 ```
 #### 4. Execute Raw SQL (when necessary - with security warnings):
 
@@ -107,7 +111,7 @@ var safeCats = dataService.SqlRaw<Cat>($"SELECT * FROM Cats WHERE Name = {namePa
 
 ## 🔐 Security & Error Handling
 
-NiORM v1.5.0+ includes comprehensive SQL injection protection, error handling, and security logging:
+NiORM v1.6.0-beta+ includes comprehensive SQL injection protection, error handling, and security logging:
 
 #### Enable Logging:
 
@@ -184,6 +188,40 @@ public class SafeDataService : DataCore
 📖 **For detailed documentation, see:** 
 - [🔐 SQL Injection Protection Guide](./NiORM/SQLServer/SQL_INJECTION_PROTECTION_GUIDE.md) - **Essential reading for secure usage!**
 - [Error Handling and Logging Guide](./NiORM/SQLServer/ERROR_HANDLING_AND_LOGGING_GUIDE.md)
+
+## 📦 Version History
+
+### 🆕 Version 1.6.0-beta (Pre-Release)
+
+**⚠️ Note:** This is a pre-release version. Use with caution in production environments.
+
+#### Changes:
+- **Updated project version to 1.6.0-beta**
+- **Enhanced Security Features:**
+  - Improved SQL injection protection with comprehensive validation
+  - Automatic detection and prevention of SQL injection attacks
+- **Enhanced Logging System:**
+  - Improved logging for entity operations
+  - Detailed error messages with better type handling
+  - Enhanced logging context for debugging
+- **Better Error Handling:**
+  - Updated method signatures to return nullable types for better error handling
+  - More descriptive error messages
+  - Improved exception handling throughout the codebase
+- **LINQ Expression Improvements:**
+  - Fixed handling of DateTime properties (e.g., `.Date` property)
+  - Improved support for nullable DateTime operations
+  - Better handling of nested member access expressions
+
+#### Installation:
+```bash
+dotnet add package NiORM --version 1.6.0-beta
+```
+
+Or via NuGet Package Manager:
+```
+Install-Package NiORM -Version 1.6.0-beta
+```
 
 ## Contributing
 We welcome contributions! Please fork the repository and submit pull requests for any improvements or features you'd like to add.
