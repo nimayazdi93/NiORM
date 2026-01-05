@@ -9,6 +9,12 @@ namespace NiORM.SQLServer.Core
     /// <typeparam name="T">Type of object related to table. It should be inherited from ITable</typeparam>
     public class Entities<T> : IEntities<T> where T : ITable, new()
     {
+        private string? TableName = null;
+        private List<string>? Keys = null;
+        private List<string>? Properties = null;
+        private List<PrimaryKeyDetails>? PrimaryKeysDetails = null;
+        private string? TypeName = null;
+        private string? RealTypeName = null;
         private string ConnectionString { get; init; }
         private SqlMaster<T> SqlMaster { get; init; }
 
@@ -27,27 +33,43 @@ namespace NiORM.SQLServer.Core
                 throw new ArgumentNullException(nameof(connectionString), error);
             }
 
+            // Initialize TypeName early so it's available for logging
+            TypeName = typeof(T).Name;
+
             try
             {
                 this.ConnectionString = connectionString;
                 SqlMaster = new SqlMaster<T>(connectionString);
-                NiORMLogger.LogDebug($"Entities<{typeof(T).Name}> initialized successfully", "Entities.Constructor");
+                NiORMLogger.LogDebug($"Entities<{TypeName}> initialized successfully", "Entities.Constructor");
             }
             catch (Exception ex)
             {
-                var error = $"Failed to initialize Entities<{typeof(T).Name}>: {ex.Message}";
+                var error = $"Failed to initialize Entities<{TypeName}>: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Constructor", null, ex);
                 throw new NiORMException(error, ex, null, "Constructor");
             }
+            LoadRequirements();
         }
 
-        private string TableName = ObjectDescriber<T, int>.GetTableName(new T());
+        private void LoadRequirements()
+        {
+            var obj = new T();
+            TableName = ObjectDescriber<T, int>.GetTableName(obj);
+            Keys = ObjectDescriber<T, int>.GetPrimaryKeyNames(obj);
+            Properties = ObjectDescriber<T, int>.GetProperties(obj).ToList();
+            PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(obj).ToList();
+            TypeName = typeof(T).Name;
+            RealTypeName = obj.GetType().ToString().Split(".").LastOrDefault();
+        }
 
         /// <summary>
         /// A method for first row in table
         /// </summary>
         /// <returns></returns>
-        public T FirstOrDefault() => SqlMaster.Get(query: $"SELECT TOP(1) * FROM {TableName}").FirstOrDefault();
+        public T? FirstOrDefault()
+        {
+            return SqlMaster.Get(query: $"SELECT TOP(1) * FROM {TableName}").FirstOrDefault();
+        }
 
         /// <summary>
         /// Returns the first entity matching the specified WHERE conditions
@@ -58,7 +80,7 @@ namespace NiORM.SQLServer.Core
         /// <returns>The first matching entity or null</returns>
         /// <exception cref="ArgumentException">Thrown when WHERE clause is null or empty</exception>
         /// <exception cref="NiORMException">Thrown when there's an error during execution</exception>
-        public T FirstOrDefault(string whereClause)
+        public T? FirstOrDefault(string whereClause)
         {
             if (string.IsNullOrWhiteSpace(whereClause))
                 throw new ArgumentException("WHERE clause cannot be null or empty", nameof(whereClause));
@@ -66,14 +88,14 @@ namespace NiORM.SQLServer.Core
             try
             {
                 // Log security warning for raw SQL usage
-                NiORMLogger.LogWarning($"Using raw SQL WHERE clause in FirstOrDefault for {typeof(T).Name}: {whereClause}", "Entities.FirstOrDefault");
-                
+                NiORMLogger.LogWarning($"Using raw SQL WHERE clause in FirstOrDefault for {TypeName}: {whereClause}", "Entities.FirstOrDefault");
+
                 var query = $"SELECT TOP(1) * FROM {TableName} WHERE {whereClause}";
                 return SqlMaster.Get(query).FirstOrDefault();
             }
             catch (Exception ex)
             {
-                var error = $"Error executing FirstOrDefault with WHERE clause for {typeof(T).Name}: {ex.Message}";
+                var error = $"Error executing FirstOrDefault with WHERE clause for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.FirstOrDefault", null, ex);
                 throw new NiORMException(error, ex, null, "FirstOrDefault");
             }
@@ -87,7 +109,7 @@ namespace NiORM.SQLServer.Core
         /// <exception cref="ArgumentNullException">Thrown when id is null or empty</exception>
         /// <exception cref="NiORMValidationException">Thrown when the table doesn't have exactly one primary key</exception>
         /// <exception cref="NiORMException">Thrown when there's an error during the find operation</exception>
-        public T Find(string id)
+        public T? Find(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -98,13 +120,12 @@ namespace NiORM.SQLServer.Core
 
             try
             {
-                NiORMLogger.LogDebug($"Finding {typeof(T).Name} with id: {id}", "Entities.Find");
-                
-                var Keys = ObjectDescriber<T, int>.GetPrimaryKeys(new T());
+                NiORMLogger.LogDebug($"Finding {TypeName} with id: {id}", "Entities.Find");
 
-                if (Keys.Count != 1)
+
+                if (Keys!.Count != 1)
                 {
-                    var error = $"Table {typeof(T).Name} must have exactly one primary key for this Find method. Found {Keys.Count} primary keys.";
+                    var error = $"Table {TypeName} must have exactly one primary key for this Find method. Found {Keys.Count} primary keys.";
                     NiORMLogger.LogError(error, "Entities.Find");
                     throw new NiORMValidationException(error);
                 }
@@ -112,17 +133,17 @@ namespace NiORM.SQLServer.Core
                 // Use parameterized query to prevent SQL injection
                 var paramHelper = new SqlParameterHelper();
                 var paramName = paramHelper.AddParameter(id);
-                
-                var query = $"SELECT TOP(1) * FROM {this.TableName} WHERE [{Keys[0].Name}] = {paramName}";
+
+                var query = $"SELECT TOP(1) * FROM {this.TableName} WHERE [{Keys[0]}] = {paramName}";
                 var result = SqlMaster.Get(query, paramHelper).FirstOrDefault();
-                
+
                 if (result != null)
                 {
-                    NiORMLogger.LogInfo($"Successfully found {typeof(T).Name} with id: {id}", "Entities.Find");
+                    NiORMLogger.LogInfo($"Successfully found {TypeName} with id: {id}", "Entities.Find");
                 }
                 else
                 {
-                    NiORMLogger.LogWarning($"No {typeof(T).Name} found with id: {id}", "Entities.Find");
+                    NiORMLogger.LogWarning($"No {TypeName} found with id: {id}", "Entities.Find");
                 }
 
                 return result;
@@ -133,7 +154,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while finding {typeof(T).Name} with id {id}: {ex.Message}";
+                var error = $"Unexpected error while finding {TypeName} with id {id}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Find", null, ex);
                 throw new NiORMException(error, ex, null, "Find");
             }
@@ -145,7 +166,10 @@ namespace NiORM.SQLServer.Core
         /// <param name="id">Primary Key</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public T Find(int id) => Find(id.ToString());
+        public T? Find(int id)
+        {
+            return Find(id.ToString());
+        }
 
         /// <summary>
         /// Finds an entity using composite primary keys (exactly two keys)
@@ -156,7 +180,7 @@ namespace NiORM.SQLServer.Core
         /// <exception cref="ArgumentNullException">Thrown when any key value is null or empty</exception>
         /// <exception cref="NiORMValidationException">Thrown when the table doesn't have exactly two primary keys</exception>
         /// <exception cref="NiORMException">Thrown when there's an error during the find operation</exception>
-        public T Find(string firstId, string secondId)
+        public T? Find(string firstId, string secondId)
         {
             if (string.IsNullOrWhiteSpace(firstId))
                 throw new ArgumentNullException(nameof(firstId), "First primary key value cannot be null or empty");
@@ -165,11 +189,9 @@ namespace NiORM.SQLServer.Core
 
             try
             {
-                var Keys = ObjectDescriber<T, int>.GetPrimaryKeyNames(new T());
-
-                if (Keys.Count != 2)
+                if (Keys?.Count != 2)
                 {
-                    var error = $"Table {typeof(T).Name} must have exactly two primary keys for this Find method. Found {Keys.Count} primary keys.";
+                    var error = $"Table {TypeName} must have exactly two primary keys for this Find method. Found {Keys?.Count} primary keys.";
                     NiORMLogger.LogError(error, "Entities.Find");
                     throw new NiORMValidationException(error);
                 }
@@ -178,20 +200,20 @@ namespace NiORM.SQLServer.Core
                 var paramHelper = new SqlParameterHelper();
                 var param1 = paramHelper.AddParameter(int.Parse(firstId));
                 var param2 = paramHelper.AddParameter(int.Parse(secondId));
-                
+
                 var query = $@"SELECT TOP(1) * FROM {this.TableName}
                               WHERE [{Keys[0]}] = {param1}
                               AND [{Keys[1]}] = {param2}";
-                
+
                 var result = SqlMaster.Get(query, paramHelper).FirstOrDefault();
-                
+
                 if (result != null)
                 {
-                    NiORMLogger.LogInfo($"Successfully found {typeof(T).Name} with composite keys: {firstId}, {secondId}", "Entities.Find");
+                    NiORMLogger.LogInfo($"Successfully found {TypeName} with composite keys: {firstId}, {secondId}", "Entities.Find");
                 }
                 else
                 {
-                    NiORMLogger.LogWarning($"No {typeof(T).Name} found with composite keys: {firstId}, {secondId}", "Entities.Find");
+                    NiORMLogger.LogWarning($"No {TypeName} found with composite keys: {firstId}, {secondId}", "Entities.Find");
                 }
 
                 return result;
@@ -202,7 +224,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while finding {typeof(T).Name} with composite keys {firstId}, {secondId}: {ex.Message}";
+                var error = $"Unexpected error while finding {TypeName} with composite keys {firstId}, {secondId}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Find", null, ex);
                 throw new NiORMException(error, ex, null, "Find");
             }
@@ -215,11 +237,13 @@ namespace NiORM.SQLServer.Core
         /// <param name="secondId">Primary Key</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public T Find(int firstId, string secondId) => Find(firstId.ToString(), secondId.ToString());
+        public T? Find(int firstId, string secondId)
+        {
+            return Find(firstId.ToString(), secondId.ToString());
+        }
 
         public List<T> ToList()
         {
-            var Properties = ObjectDescriber<T, string>.GetProperties(new T());
             return SqlMaster.Get($"SELECT * FROM {this.TableName}").ToList();
         }
 
@@ -240,13 +264,13 @@ namespace NiORM.SQLServer.Core
             try
             {
                 // Log security warning for raw SQL usage
-                NiORMLogger.LogWarning($"Executing raw SQL query for {typeof(T).Name}: {sqlQuery}", "Entities.Query");
-                
+                NiORMLogger.LogWarning($"Executing raw SQL query for {TypeName}: {sqlQuery}", "Entities.Query");
+
                 return SqlMaster.Get(sqlQuery);
             }
             catch (Exception ex)
             {
-                var error = $"Error executing custom SQL query for {typeof(T).Name}: {ex.Message}";
+                var error = $"Error executing custom SQL query for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Query", sqlQuery, ex);
                 throw new NiORMException(error, ex, sqlQuery, "Query");
             }
@@ -269,13 +293,13 @@ namespace NiORM.SQLServer.Core
             try
             {
                 // Log security warning for raw SQL usage
-                NiORMLogger.LogWarning($"Executing raw SQL command for {typeof(T).Name}: {sqlCommand}", "Entities.Execute");
-                
+                NiORMLogger.LogWarning($"Executing raw SQL command for {TypeName}: {sqlCommand}", "Entities.Execute");
+
                 return SqlMaster.Execute(sqlCommand);
             }
             catch (Exception ex)
             {
-                var error = $"Error executing custom SQL command for {typeof(T).Name}: {ex.Message}";
+                var error = $"Error executing custom SQL command for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Execute", sqlCommand, ex);
                 throw new NiORMException(error, ex, sqlCommand, "Execute");
             }
@@ -298,14 +322,14 @@ namespace NiORM.SQLServer.Core
             try
             {
                 // Log security warning for raw SQL usage
-                NiORMLogger.LogWarning($"Using raw SQL WHERE clause in List for {typeof(T).Name}: {whereClause}", "Entities.List");
-                
+                NiORMLogger.LogWarning($"Using raw SQL WHERE clause in List for {TypeName}: {whereClause}", "Entities.List");
+
                 var query = $"SELECT * FROM {this.TableName} WHERE {whereClause}";
                 return SqlMaster.Get(query);
             }
             catch (Exception ex)
             {
-                var error = $"Error executing List with WHERE clause for {typeof(T).Name}: {ex.Message}";
+                var error = $"Error executing List with WHERE clause for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.List", null, ex);
                 throw new NiORMException(error, ex, null, "List");
             }
@@ -328,16 +352,16 @@ namespace NiORM.SQLServer.Core
                 // Use parameterized query to prevent SQL injection
                 var paramHelper = new SqlParameterHelper();
                 var paramName = paramHelper.AddParameter(Predict.Item2);
-                
+
                 var whereClause = $"[{Predict.Item1}] = {paramName}";
                 var query = $"SELECT * FROM {this.TableName} WHERE {whereClause}";
-                
-                NiORMLogger.LogDebug($"Executing Where query for {typeof(T).Name}: {Predict.Item1} = {Predict.Item2}", "Entities.Where");
+
+                NiORMLogger.LogDebug($"Executing Where query for {TypeName}: {Predict.Item1} = {Predict.Item2}", "Entities.Where");
                 return SqlMaster.Get(query, paramHelper);
             }
             catch (Exception ex)
             {
-                var error = $"Error executing Where query for {typeof(T).Name}: {ex.Message}";
+                var error = $"Error executing Where query for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Where", null, ex);
                 throw new NiORMException(error, ex, null, "Where");
             }
@@ -369,9 +393,12 @@ namespace NiORM.SQLServer.Core
                     binaryExpr = (BinaryExpression)expression;
                     return $"({ExpressionToString(binaryExpr.Left)} OR {ExpressionToString(binaryExpr.Right)})";
 
+                case ExpressionType.NotEqual:
+                    binaryExpr = (BinaryExpression)expression;
+                    return $"{ExpressionToString(binaryExpr.Left)} != {ExpressionToString(binaryExpr.Right)}";
+
                 case ExpressionType.MemberAccess:
-                    var memberExpr = (MemberExpression)expression;
-                    return memberExpr.Member.Name;
+                    return HandleMemberAccess((MemberExpression)expression);
 
                 case ExpressionType.Constant:
                     var constExpr = (ConstantExpression)expression;
@@ -383,20 +410,96 @@ namespace NiORM.SQLServer.Core
             }
         }
 
-        private string GetType()
+        private string HandleMemberAccess(MemberExpression memberExpr)
         {
-            return new T().GetType().ToString().Split(".").LastOrDefault();
+            // Handle .Date property on DateTime or DateTime?
+            if (memberExpr.Member.Name == "Date")
+            {
+                var memberType = memberExpr.Member.DeclaringType;
+                if (memberType == typeof(DateTime) || memberType == typeof(DateTime?))
+                {
+                    // Get the base expression (e.g., c.DateTime.Value or DateTime.Now)
+                    // Skip .Value if present
+                    var baseExpression = BuildMemberPath(memberExpr.Expression!, skipValue: true);
+                    return $"CAST({baseExpression} AS DATE)";
+                }
+            }
+
+            // Handle regular member accesses (including DateTime.Now and .Value)
+            return BuildMemberPath(memberExpr, skipValue: false);
         }
+
+        private string BuildMemberPath(Expression expression, bool skipValue = false)
+        {
+            if (expression == null)
+            {
+                return string.Empty;
+            }
+
+            switch (expression.NodeType)
+            {
+                case ExpressionType.Parameter:
+                    // This is the parameter 'c' in the lambda - return empty to start building path
+                    return string.Empty;
+
+                case ExpressionType.MemberAccess:
+                    var memberExpr = (MemberExpression)expression;
+                    
+                    // Handle DateTime.Now (static property, expression is null)
+                    if (memberExpr.Member.DeclaringType == typeof(DateTime) && memberExpr.Member.Name == "Now" && memberExpr.Expression == null)
+                    {
+                        return "GETDATE()";
+                    }
+
+                    // Skip .Value property on nullable types if requested
+                    if (skipValue && memberExpr.Member.Name == "Value")
+                    {
+                        return BuildMemberPath(memberExpr.Expression!, skipValue: true);
+                    }
+
+                    // Recursively build the path
+                    var baseExpr = BuildMemberPath(memberExpr.Expression!, skipValue: skipValue);
+                    var memberName = memberExpr.Member.Name;
+
+                    // If base is empty, this is the first member (column name)
+                    if (string.IsNullOrEmpty(baseExpr))
+                    {
+                        return $"[{memberName}]";
+                    }
+                    // If base is GETDATE(), we're accessing a property on DateTime.Now
+                    else if (baseExpr == "GETDATE()")
+                    {
+                        return baseExpr;
+                    }
+                    // Otherwise, this is a nested property access
+                    // For database columns, we typically only have one level, but handle nested gracefully
+                    else
+                    {
+                        // Remove brackets from base if it's a column name, then add next member
+                        var cleanBase = baseExpr.TrimStart('[').TrimEnd(']');
+                        return $"[{cleanBase}.{memberName}]";
+                    }
+
+                case ExpressionType.Constant:
+                    var constExpr = (ConstantExpression)expression;
+                    return ObjectDescriber<T, int>.ConvertToSqlFormat(constExpr.Value);
+
+                default:
+                    // For other expression types, recursively process them
+                    return ExpressionToString(expression);
+            }
+        }
+
 
         /// <summary>
         /// A method for adding a row and return it entirely
         /// </summary>
         /// <param name="entity">object we are adding</param>
         /// <exception cref="Exception"></exception>
-        public T AddReturn(T entity)
+        public T? AddReturn(T entity)
         {
 
-            var Type = GetType();
+            var Type = RealTypeName;
             if (entity is IView)
             {
                 throw new Exception($"type: {Type} can't be added or edited because it's just View");
@@ -408,11 +511,8 @@ namespace NiORM.SQLServer.Core
                 entity = (T)updatable;
             }
 
-            var ListOfProperties = ObjectDescriber<T, int>
-                                   .GetProperties(entity)
-                                   .ToList();
-            var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
-            PrimaryKeysDetails.ForEach((pk) =>
+            var ListOfProperties = Properties!.ToList();
+            PrimaryKeysDetails!.ForEach((pk) =>
             {
                 if (pk.IsAutoIncremental)
                 {
@@ -436,7 +536,7 @@ namespace NiORM.SQLServer.Core
             // Use parameterized query to prevent SQL injection
             var paramHelper = new SqlParameterHelper();
             var valuesClause = paramHelper.BuildInsertValuesClause(ListOfProperties, entity);
-            
+
             var query = $@"INSERT INTO {this.TableName} 
                            ({string.Join(", ", ListOfProperties.Select(c => $"[{c}]"))})
                            OUTPUT inserted.*
@@ -465,9 +565,9 @@ namespace NiORM.SQLServer.Core
 
             try
             {
-                NiORMLogger.LogDebug($"Adding new {typeof(T).Name} entity", "Entities.Add");
+                NiORMLogger.LogDebug($"Adding new {TypeName} entity", "Entities.Add");
 
-                var Type = GetType();
+                var Type = RealTypeName;
                 if (entity is IView)
                 {
                     var error = $"Entity type {Type} cannot be added because it's a view";
@@ -484,13 +584,10 @@ namespace NiORM.SQLServer.Core
                     NiORMLogger.LogDebug("Set CreatedDateTime and UpdatedDateTime for updatable entity", "Entities.Add");
                 }
 
-                var ListOfProperties = ObjectDescriber<T, int>
-                                       .GetProperties(entity)
-                                       .ToList();
-                var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
-                
+                var ListOfProperties = Properties!.ToList();
+
                 // Handle primary key properties
-                PrimaryKeysDetails.ForEach((pk) =>
+                PrimaryKeysDetails!.ForEach((pk) =>
                 {
                     if (pk.IsAutoIncremental)
                     {
@@ -516,13 +613,13 @@ namespace NiORM.SQLServer.Core
                 // Use parameterized query to prevent SQL injection
                 var paramHelper = new SqlParameterHelper();
                 var valuesClause = paramHelper.BuildInsertValuesClause(ListOfProperties, entity);
-                
+
                 var query = $@"INSERT INTO {this.TableName} 
                                ({string.Join(", ", ListOfProperties.Select(c => $"[{c}]"))})
                                {valuesClause}";
 
                 SqlMaster.Execute(query, paramHelper);
-                NiORMLogger.LogInfo($"Successfully added {typeof(T).Name} entity", "Entities.Add");
+                NiORMLogger.LogInfo($"Successfully added {TypeName} entity", "Entities.Add");
             }
             catch (NiORMException)
             {
@@ -530,7 +627,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while adding {typeof(T).Name} entity: {ex.Message}";
+                var error = $"Unexpected error while adding {TypeName} entity: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Add", null, ex);
                 throw new NiORMException(error, ex, null, "Add");
             }
@@ -554,7 +651,7 @@ namespace NiORM.SQLServer.Core
 
             try
             {
-                var Type = GetType();
+                var Type = RealTypeName;
 
                 if (entity is IView)
                 {
@@ -571,25 +668,23 @@ namespace NiORM.SQLServer.Core
                     NiORMLogger.LogDebug("Set UpdatedDateTime for updatable entity", "Entities.Edit");
                 }
 
-                var ListOfProperties = ObjectDescriber<T, int>
-                   .GetProperties(entity).ToList();
+                var ListOfProperties = Properties!.ToList();
 
-                var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeyNames(entity);
-                var PrimaryKeysDetails = ObjectDescriber<T, int>.GetPrimaryKeyDetails(entity).ToList();
+                var PrimaryKeys = Keys;
 
-                ListOfProperties.AddRange(PrimaryKeysDetails.Where(c => c.IsAutoIncremental == false).Select(c => c.Name).ToList());
+                ListOfProperties.AddRange(PrimaryKeysDetails!.Where(c => c.IsAutoIncremental == false).Select(c => c.Name).ToList());
                 ListOfProperties = ListOfProperties.Distinct().ToList();
-                ListOfProperties = ListOfProperties.Where(c => !PrimaryKeysDetails.Any(cc => cc.Name == c && cc.IsAutoIncremental == true)).ToList();
-                
+                ListOfProperties = ListOfProperties.Where(c => !PrimaryKeysDetails!.Any(cc => cc.Name == c && cc.IsAutoIncremental == true)).ToList();
+
                 // Use parameterized query to prevent SQL injection
                 var paramHelper = new SqlParameterHelper();
                 var setClause = paramHelper.BuildUpdateSetClause(ListOfProperties, entity);
-                var whereClause = paramHelper.BuildPrimaryKeyWhereClause(PrimaryKeys, entity);
-                
+                var whereClause = paramHelper.BuildPrimaryKeyWhereClause(PrimaryKeys!, entity);
+
                 var query = $"UPDATE {this.TableName} {setClause} {whereClause}";
 
                 var rowsAffected = SqlMaster.Execute(query, paramHelper);
-                NiORMLogger.LogInfo($"Successfully updated {typeof(T).Name} entity, {rowsAffected} rows affected", "Entities.Edit");
+                NiORMLogger.LogInfo($"Successfully updated {TypeName} entity, {rowsAffected} rows affected", "Entities.Edit");
             }
             catch (NiORMException)
             {
@@ -597,7 +692,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while updating {typeof(T).Name} entity: {ex.Message}";
+                var error = $"Unexpected error while updating {TypeName} entity: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Edit", null, ex);
                 throw new NiORMException(error, ex, null, "Edit");
             }
@@ -620,23 +715,22 @@ namespace NiORM.SQLServer.Core
 
             try
             {
-                var PrimaryKeys = ObjectDescriber<T, int>.GetPrimaryKeyNames(entity);
 
-                if (PrimaryKeys == null || !PrimaryKeys.Any())
+                if (Keys == null || !Keys.Any())
                 {
-                    var error = $"Entity {typeof(T).Name} must have at least one primary key to be removed";
+                    var error = $"Entity {TypeName} must have at least one primary key to be removed";
                     NiORMLogger.LogError(error, "Entities.Remove");
                     throw new NiORMValidationException(error, entity);
                 }
 
                 // Use parameterized query to prevent SQL injection
                 var paramHelper = new SqlParameterHelper();
-                var whereClause = paramHelper.BuildPrimaryKeyWhereClause(PrimaryKeys, entity);
-                
+                var whereClause = paramHelper.BuildPrimaryKeyWhereClause(Keys, entity);
+
                 var query = $"DELETE FROM {this.TableName} {whereClause}";
 
                 var rowsAffected = SqlMaster.Execute(query, paramHelper);
-                NiORMLogger.LogInfo($"Successfully removed {typeof(T).Name} entity, {rowsAffected} rows affected", "Entities.Remove");
+                NiORMLogger.LogInfo($"Successfully removed {TypeName} entity, {rowsAffected} rows affected", "Entities.Remove");
             }
             catch (NiORMException)
             {
@@ -644,7 +738,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while removing {typeof(T).Name} entity: {ex.Message}";
+                var error = $"Unexpected error while removing {TypeName} entity: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Remove", null, ex);
                 throw new NiORMException(error, ex, null, "Remove");
             }
@@ -677,15 +771,15 @@ namespace NiORM.SQLServer.Core
                 // Use parameterized query to prevent SQL injection
                 var paramHelper = new SqlParameterHelper();
                 var whereClause = paramHelper.BuildWhereClause(conditions);
-                
+
                 var query = $"SELECT * FROM {this.TableName} {whereClause}";
-                
-                NiORMLogger.LogDebug($"Executing WhereMultiple query for {typeof(T).Name} with {conditions.Count} conditions", "Entities.WhereMultiple");
+
+                NiORMLogger.LogDebug($"Executing WhereMultiple query for {TypeName} with {conditions.Count} conditions", "Entities.WhereMultiple");
                 return SqlMaster.Get(query, paramHelper);
             }
             catch (Exception ex)
             {
-                var error = $"Error executing WhereMultiple query for {typeof(T).Name}: {ex.Message}";
+                var error = $"Error executing WhereMultiple query for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.WhereMultiple", null, ex);
                 throw new NiORMException(error, ex, null, "WhereMultiple");
             }
@@ -711,7 +805,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Error finding {typeof(T).Name} by property {propertyName}: {ex.Message}";
+                var error = $"Error finding {TypeName} by property {propertyName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.FindByProperty", null, ex);
                 throw new NiORMException(error, ex, null, "FindByProperty");
             }
@@ -724,7 +818,7 @@ namespace NiORM.SQLServer.Core
         /// <returns>The first matching entity or null</returns>
         /// <exception cref="ArgumentException">Thrown when conditions is null or empty</exception>
         /// <exception cref="NiORMException">Thrown when there's an error during the search</exception>
-        public T FirstOrDefaultMultiple(Dictionary<string, object?> conditions)
+        public T? FirstOrDefaultMultiple(Dictionary<string, object?> conditions)
         {
             if (conditions == null || !conditions.Any())
                 throw new ArgumentException("Conditions cannot be null or empty", nameof(conditions));
@@ -734,19 +828,19 @@ namespace NiORM.SQLServer.Core
                 // Use parameterized query to prevent SQL injection
                 var paramHelper = new SqlParameterHelper();
                 var whereClause = paramHelper.BuildWhereClause(conditions);
-                
+
                 var query = $"SELECT TOP(1) * FROM {this.TableName} {whereClause}";
-                
-                NiORMLogger.LogDebug($"Executing FirstOrDefaultMultiple query for {typeof(T).Name} with {conditions.Count} conditions", "Entities.FirstOrDefaultMultiple");
+
+                NiORMLogger.LogDebug($"Executing FirstOrDefaultMultiple query for {TypeName} with {conditions.Count} conditions", "Entities.FirstOrDefaultMultiple");
                 return SqlMaster.Get(query, paramHelper).FirstOrDefault();
             }
             catch (Exception ex)
             {
-                var error = $"Error executing FirstOrDefaultMultiple query for {typeof(T).Name}: {ex.Message}";
+                var error = $"Error executing FirstOrDefaultMultiple query for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.FirstOrDefaultMultiple", null, ex);
                 throw new NiORMException(error, ex, null, "FirstOrDefaultMultiple");
             }
         }
-         
+
     }
 }
