@@ -26,7 +26,7 @@ namespace NiORM.SQLServer.Interfaces
         /// </summary>
         /// <param name="entity">The entity to add</param>
         /// <returns>The added entity with any generated values</returns>
-        T AddReturn(T entity);
+        T? AddReturn(T entity);
 
         /// <summary>
         /// Adds a new entity to the database
@@ -73,34 +73,34 @@ namespace NiORM.SQLServer.Interfaces
         /// <param name="firstId">The first primary key value</param>
         /// <param name="secondId">The second primary key value</param>
         /// <returns>The entity if found, null otherwise</returns>
-        T Find(int firstId, string secondId);
+        T? Find(int firstId, string secondId);
 
         /// <summary>
         /// Finds an entity using its integer primary key
         /// </summary>
         /// <param name="id">The primary key value</param>
         /// <returns>The entity if found, null otherwise</returns>
-        T Find(int id);
+        T? Find(int id);
 
         /// <summary>
         /// Finds an entity using its string primary key
         /// </summary>
         /// <param name="id">The primary key value</param>
         /// <returns>The entity if found, null otherwise</returns>
-        T Find(string id);
+        T? Find(string id);
 
         /// <summary>
         /// Returns the first entity matching the specified query, or null if none found
         /// </summary>
         /// <param name="Query">The WHERE clause query</param>
         /// <returns>The first matching entity or null</returns>
-        T FirstOrDefault(string Query);
+        T? FirstOrDefault(string Query);
 
         /// <summary>
         /// Returns the first entity in the table, or null if the table is empty
         /// </summary>
         /// <returns>The first entity or null</returns>
-        T FirstOrDefault();
+        T? FirstOrDefault();
 
         /// <summary>
         /// Executes a custom SQL command (non-query)
@@ -141,6 +141,6 @@ namespace NiORM.SQLServer.Interfaces
         /// </summary>
         /// <param name="conditions">Dictionary of column names and their values</param>
         /// <returns>The first matching entity or null</returns>
-        T FirstOrDefaultMultiple(Dictionary<string, object?> conditions);
+        T? FirstOrDefaultMultiple(Dictionary<string, object?> conditions);
     }
 }
