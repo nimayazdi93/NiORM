@@ -33,6 +33,9 @@ namespace NiORM.SQLServer.Core
                 throw new ArgumentNullException(nameof(connectionString), error);
             }
 
+            // Initialize TypeName early so it's available for logging
+            TypeName = typeof(T).Name;
+
             try
             {
                 this.ConnectionString = connectionString;
@@ -508,7 +511,7 @@ namespace NiORM.SQLServer.Core
                 entity = (T)updatable;
             }
 
-            var ListOfProperties = Properties!;
+            var ListOfProperties = Properties!.ToList();
             PrimaryKeysDetails!.ForEach((pk) =>
             {
                 if (pk.IsAutoIncremental)
@@ -581,7 +584,7 @@ namespace NiORM.SQLServer.Core
                     NiORMLogger.LogDebug("Set CreatedDateTime and UpdatedDateTime for updatable entity", "Entities.Add");
                 }
 
-                var ListOfProperties = Properties!;
+                var ListOfProperties = Properties!.ToList();
 
                 // Handle primary key properties
                 PrimaryKeysDetails!.ForEach((pk) =>
@@ -665,7 +668,7 @@ namespace NiORM.SQLServer.Core
                     NiORMLogger.LogDebug("Set UpdatedDateTime for updatable entity", "Entities.Edit");
                 }
 
-                var ListOfProperties = Properties!;
+                var ListOfProperties = Properties!.ToList();
 
                 var PrimaryKeys = Keys;
 
