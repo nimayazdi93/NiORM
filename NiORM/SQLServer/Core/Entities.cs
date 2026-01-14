@@ -28,7 +28,7 @@ namespace NiORM.SQLServer.Core
         {
             if (string.IsNullOrWhiteSpace(connectionString))
             {
-                var error = "Connection string cannot be null or empty";
+                string error = "Connection string cannot be null or empty";
                 NiORMLogger.LogError(error, "Entities.Constructor");
                 throw new ArgumentNullException(nameof(connectionString), error);
             }
@@ -44,7 +44,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Failed to initialize Entities<{TypeName}>: {ex.Message}";
+                string error = $"Failed to initialize Entities<{TypeName}>: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Constructor", null, ex);
                 throw new NiORMException(error, ex, null, "Constructor");
             }
@@ -53,7 +53,7 @@ namespace NiORM.SQLServer.Core
 
         private void LoadRequirements()
         {
-            var obj = new T();
+            T obj = new();
             TableName = ObjectDescriber<T, int>.GetTableName(obj);
             Keys = ObjectDescriber<T, int>.GetPrimaryKeyNames(obj);
             Properties = ObjectDescriber<T, int>.GetProperties(obj).ToList();
@@ -83,22 +83,30 @@ namespace NiORM.SQLServer.Core
         public T? FirstOrDefault(string whereClause)
         {
             if (string.IsNullOrWhiteSpace(whereClause))
+            {
                 throw new ArgumentException("WHERE clause cannot be null or empty", nameof(whereClause));
+            }
 
             try
             {
                 // Log security warning for raw SQL usage
                 NiORMLogger.LogWarning($"Using raw SQL WHERE clause in FirstOrDefault for {TypeName}: {whereClause}", "Entities.FirstOrDefault");
 
-                var query = $"SELECT TOP(1) * FROM {TableName} WHERE {whereClause}";
+                string query = $"SELECT TOP(1) * FROM {TableName} WHERE {whereClause}";
                 return SqlMaster.Get(query).FirstOrDefault();
             }
             catch (Exception ex)
             {
-                var error = $"Error executing FirstOrDefault with WHERE clause for {TypeName}: {ex.Message}";
+                string error = $"Error executing FirstOrDefault with WHERE clause for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.FirstOrDefault", null, ex);
                 throw new NiORMException(error, ex, null, "FirstOrDefault");
             }
+        }
+
+        public T? FirstOrDefault(Expression<Func<T, bool>> predicate)
+        {
+            string query = ExpressionToString(predicate.Body);
+            return FirstOrDefault(query);
         }
 
         /// <summary>
@@ -113,7 +121,7 @@ namespace NiORM.SQLServer.Core
         {
             if (string.IsNullOrWhiteSpace(id))
             {
-                var error = "Primary key value cannot be null or empty";
+                string error = "Primary key value cannot be null or empty";
                 NiORMLogger.LogError(error, "Entities.Find");
                 throw new ArgumentNullException(nameof(id), error);
             }
@@ -125,17 +133,17 @@ namespace NiORM.SQLServer.Core
 
                 if (Keys!.Count != 1)
                 {
-                    var error = $"Table {TypeName} must have exactly one primary key for this Find method. Found {Keys.Count} primary keys.";
+                    string error = $"Table {TypeName} must have exactly one primary key for this Find method. Found {Keys.Count} primary keys.";
                     NiORMLogger.LogError(error, "Entities.Find");
                     throw new NiORMValidationException(error);
                 }
 
                 // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var paramName = paramHelper.AddParameter(id);
+                SqlParameterHelper paramHelper = new();
+                string paramName = paramHelper.AddParameter(id);
 
-                var query = $"SELECT TOP(1) * FROM {this.TableName} WHERE [{Keys[0]}] = {paramName}";
-                var result = SqlMaster.Get(query, paramHelper).FirstOrDefault();
+                string query = $"SELECT TOP(1) * FROM {this.TableName} WHERE [{Keys[0]}] = {paramName}";
+                T? result = SqlMaster.Get(query, paramHelper).FirstOrDefault();
 
                 if (result != null)
                 {
@@ -154,7 +162,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while finding {TypeName} with id {id}: {ex.Message}";
+                string error = $"Unexpected error while finding {TypeName} with id {id}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Find", null, ex);
                 throw new NiORMException(error, ex, null, "Find");
             }
@@ -171,6 +179,11 @@ namespace NiORM.SQLServer.Core
             return Find(id.ToString());
         }
 
+        public T? Find(object id)
+        {
+            return Find(id.ToString());
+        }
+
         /// <summary>
         /// Finds an entity using composite primary keys (exactly two keys)
         /// </summary>
@@ -183,29 +196,34 @@ namespace NiORM.SQLServer.Core
         public T? Find(string firstId, string secondId)
         {
             if (string.IsNullOrWhiteSpace(firstId))
+            {
                 throw new ArgumentNullException(nameof(firstId), "First primary key value cannot be null or empty");
+            }
+
             if (string.IsNullOrWhiteSpace(secondId))
+            {
                 throw new ArgumentNullException(nameof(secondId), "Second primary key value cannot be null or empty");
+            }
 
             try
             {
                 if (Keys?.Count != 2)
                 {
-                    var error = $"Table {TypeName} must have exactly two primary keys for this Find method. Found {Keys?.Count} primary keys.";
+                    string error = $"Table {TypeName} must have exactly two primary keys for this Find method. Found {Keys?.Count} primary keys.";
                     NiORMLogger.LogError(error, "Entities.Find");
                     throw new NiORMValidationException(error);
                 }
 
                 // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var param1 = paramHelper.AddParameter(int.Parse(firstId));
-                var param2 = paramHelper.AddParameter(int.Parse(secondId));
+                SqlParameterHelper paramHelper = new();
+                string param1 = paramHelper.AddParameter(int.Parse(firstId));
+                string param2 = paramHelper.AddParameter(int.Parse(secondId));
 
-                var query = $@"SELECT TOP(1) * FROM {this.TableName}
+                string query = $@"SELECT TOP(1) * FROM {this.TableName}
                               WHERE [{Keys[0]}] = {param1}
                               AND [{Keys[1]}] = {param2}";
 
-                var result = SqlMaster.Get(query, paramHelper).FirstOrDefault();
+                T? result = SqlMaster.Get(query, paramHelper).FirstOrDefault();
 
                 if (result != null)
                 {
@@ -224,7 +242,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while finding {TypeName} with composite keys {firstId}, {secondId}: {ex.Message}";
+                string error = $"Unexpected error while finding {TypeName} with composite keys {firstId}, {secondId}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Find", null, ex);
                 throw new NiORMException(error, ex, null, "Find");
             }
@@ -259,7 +277,9 @@ namespace NiORM.SQLServer.Core
         public List<T> Query(string sqlQuery)
         {
             if (string.IsNullOrWhiteSpace(sqlQuery))
+            {
                 throw new ArgumentException("SQL query cannot be null or empty", nameof(sqlQuery));
+            }
 
             try
             {
@@ -270,7 +290,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Error executing custom SQL query for {TypeName}: {ex.Message}";
+                string error = $"Error executing custom SQL query for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Query", sqlQuery, ex);
                 throw new NiORMException(error, ex, sqlQuery, "Query");
             }
@@ -288,7 +308,9 @@ namespace NiORM.SQLServer.Core
         public int Execute(string sqlCommand)
         {
             if (string.IsNullOrWhiteSpace(sqlCommand))
+            {
                 throw new ArgumentException("SQL command cannot be null or empty", nameof(sqlCommand));
+            }
 
             try
             {
@@ -299,7 +321,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Error executing custom SQL command for {TypeName}: {ex.Message}";
+                string error = $"Error executing custom SQL command for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Execute", sqlCommand, ex);
                 throw new NiORMException(error, ex, sqlCommand, "Execute");
             }
@@ -317,64 +339,35 @@ namespace NiORM.SQLServer.Core
         public List<T> List(string whereClause)
         {
             if (string.IsNullOrWhiteSpace(whereClause))
+            {
                 throw new ArgumentException("WHERE clause cannot be null or empty", nameof(whereClause));
+            }
 
             try
             {
                 // Log security warning for raw SQL usage
                 NiORMLogger.LogWarning($"Using raw SQL WHERE clause in List for {TypeName}: {whereClause}", "Entities.List");
 
-                var query = $"SELECT * FROM {this.TableName} WHERE {whereClause}";
+                string query = $"SELECT * FROM {this.TableName} WHERE {whereClause}";
                 return SqlMaster.Get(query);
             }
             catch (Exception ex)
             {
-                var error = $"Error executing List with WHERE clause for {TypeName}: {ex.Message}";
+                string error = $"Error executing List with WHERE clause for {TypeName}: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.List", null, ex);
                 throw new NiORMException(error, ex, null, "List");
             }
         }
 
         /// <summary>
-        /// Filters entities using a simple property-value predicate (SQL injection safe)
-        /// </summary>
-        /// <param name="Predict">A tuple containing property name and value</param>
-        /// <returns>A list of filtered entities</returns>
-        /// <exception cref="ArgumentException">Thrown when property name is null or empty</exception>
-        /// <exception cref="NiORMException">Thrown when there's an error during the filtering operation</exception>
-        public List<T> Where((string, string) Predict)
-        {
-            if (string.IsNullOrWhiteSpace(Predict.Item1))
-                throw new ArgumentException("Property name cannot be null or empty", nameof(Predict));
-
-            try
-            {
-                // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var paramName = paramHelper.AddParameter(Predict.Item2);
-
-                var whereClause = $"[{Predict.Item1}] = {paramName}";
-                var query = $"SELECT * FROM {this.TableName} WHERE {whereClause}";
-
-                NiORMLogger.LogDebug($"Executing Where query for {TypeName}: {Predict.Item1} = {Predict.Item2}", "Entities.Where");
-                return SqlMaster.Get(query, paramHelper);
-            }
-            catch (Exception ex)
-            {
-                var error = $"Error executing Where query for {TypeName}: {ex.Message}";
-                NiORMLogger.LogError(error, "Entities.Where", null, ex);
-                throw new NiORMException(error, ex, null, "Where");
-            }
-        }
-        /// <summary>
         /// A extension for linq's WHERE
         /// </summary>
         /// <param name="Predict">A dictionary for predict</param>
-        /// <returns></returns>
-        public List<T> Where(Expression<Func<T, bool>> predicate)
+        /// <returns></returns> 
+        public IWhereEntities<T> Where(Expression<Func<T, bool>> predicate)
         {
-            var Query = ExpressionToString(predicate.Body);
-            return List(Query);
+            string Query = ExpressionToString(predicate.Body);
+            return new WhereEntities<T>(this, Query);
         }
 
         private string ExpressionToString(Expression expression)
@@ -382,7 +375,7 @@ namespace NiORM.SQLServer.Core
             switch (expression.NodeType)
             {
                 case ExpressionType.Equal:
-                    var binaryExpr = (BinaryExpression)expression;
+                    BinaryExpression binaryExpr = (BinaryExpression)expression;
                     return $"{ExpressionToString(binaryExpr.Left)} = {ExpressionToString(binaryExpr.Right)}";
 
                 case ExpressionType.AndAlso:
@@ -401,15 +394,15 @@ namespace NiORM.SQLServer.Core
                     return HandleMemberAccess((MemberExpression)expression);
 
                 case ExpressionType.Constant:
-                    var constExpr = (ConstantExpression)expression;
-                    var constExprString = ObjectDescriber<T, int>.ConvertToSqlFormat(constExpr.Value);
+                    ConstantExpression constExpr = (ConstantExpression)expression;
+                    string constExprString = ObjectDescriber<T, int>.ConvertToSqlFormat(constExpr.Value);
                     return constExprString;
 
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
                     // Handle type conversions (e.g., unwrapping nullable types like DateTime? to DateTime)
                     // Just recursively process the inner expression
-                    var unaryExpr = (UnaryExpression)expression;
+                    UnaryExpression unaryExpr = (UnaryExpression)expression;
                     return ExpressionToString(unaryExpr.Operand);
 
                 default:
@@ -422,12 +415,12 @@ namespace NiORM.SQLServer.Core
             // Handle .Date property on DateTime or DateTime?
             if (memberExpr.Member.Name == "Date")
             {
-                var memberType = memberExpr.Member.DeclaringType;
+                Type? memberType = memberExpr.Member.DeclaringType;
                 if (memberType == typeof(DateTime) || memberType == typeof(DateTime?))
                 {
                     // Get the base expression (e.g., c.DateTime.Value or DateTime.Now)
                     // Skip .Value if present
-                    var baseExpression = BuildMemberPath(memberExpr.Expression!, skipValue: true);
+                    string baseExpression = BuildMemberPath(memberExpr.Expression!, skipValue: true);
                     return $"CAST({baseExpression} AS DATE)";
                 }
             }
@@ -450,8 +443,8 @@ namespace NiORM.SQLServer.Core
                     return string.Empty;
 
                 case ExpressionType.MemberAccess:
-                    var memberExpr = (MemberExpression)expression;
-                    
+                    MemberExpression memberExpr = (MemberExpression)expression;
+
                     // Handle DateTime.Now (static property, expression is null)
                     if (memberExpr.Member.DeclaringType == typeof(DateTime) && memberExpr.Member.Name == "Now" && memberExpr.Expression == null)
                     {
@@ -465,8 +458,8 @@ namespace NiORM.SQLServer.Core
                     }
 
                     // Recursively build the path
-                    var baseExpr = BuildMemberPath(memberExpr.Expression!, skipValue: skipValue);
-                    var memberName = memberExpr.Member.Name;
+                    string baseExpr = BuildMemberPath(memberExpr.Expression!, skipValue: skipValue);
+                    string memberName = memberExpr.Member.Name;
 
                     // If base is empty, this is the first member (column name)
                     if (string.IsNullOrEmpty(baseExpr))
@@ -483,19 +476,19 @@ namespace NiORM.SQLServer.Core
                     else
                     {
                         // Remove brackets from base if it's a column name, then add next member
-                        var cleanBase = baseExpr.TrimStart('[').TrimEnd(']');
+                        string cleanBase = baseExpr.TrimStart('[').TrimEnd(']');
                         return $"[{cleanBase}.{memberName}]";
                     }
 
                 case ExpressionType.Constant:
-                    var constExpr = (ConstantExpression)expression;
+                    ConstantExpression constExpr = (ConstantExpression)expression;
                     return ObjectDescriber<T, int>.ConvertToSqlFormat(constExpr.Value);
 
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
                     // Handle type conversions (e.g., unwrapping nullable types)
                     // Just recursively process the inner expression
-                    var unaryExpr = (UnaryExpression)expression;
+                    UnaryExpression unaryExpr = (UnaryExpression)expression;
                     return BuildMemberPath(unaryExpr.Operand, skipValue);
 
                 default:
@@ -513,7 +506,7 @@ namespace NiORM.SQLServer.Core
         public T? AddReturn(T entity)
         {
 
-            var Type = RealTypeName;
+            string? Type = RealTypeName;
             if (entity is IView)
             {
                 throw new Exception($"type: {Type} can't be added or edited because it's just View");
@@ -525,7 +518,7 @@ namespace NiORM.SQLServer.Core
                 entity = (T)updatable;
             }
 
-            var ListOfProperties = Properties!.ToList();
+            List<string> ListOfProperties = Properties!.ToList();
             PrimaryKeysDetails!.ForEach((pk) =>
             {
                 if (pk.IsAutoIncremental)
@@ -548,15 +541,15 @@ namespace NiORM.SQLServer.Core
             ListOfProperties = ListOfProperties.Distinct().ToList();
 
             // Use parameterized query to prevent SQL injection
-            var paramHelper = new SqlParameterHelper();
-            var valuesClause = paramHelper.BuildInsertValuesClause(ListOfProperties, entity);
+            SqlParameterHelper paramHelper = new();
+            string valuesClause = paramHelper.BuildInsertValuesClause(ListOfProperties, entity);
 
-            var query = $@"INSERT INTO {this.TableName} 
+            string query = $@"INSERT INTO {this.TableName} 
                            ({string.Join(", ", ListOfProperties.Select(c => $"[{c}]"))})
                            OUTPUT inserted.*
                            {valuesClause}";
 
-            var result = SqlMaster.Get(query, paramHelper);
+            List<T> result = SqlMaster.Get(query, paramHelper);
             return result.FirstOrDefault();
 
         }
@@ -572,7 +565,7 @@ namespace NiORM.SQLServer.Core
         {
             if (entity == null)
             {
-                var error = "Entity cannot be null";
+                string error = "Entity cannot be null";
                 NiORMLogger.LogError(error, "Entities.Add");
                 throw new ArgumentNullException(nameof(entity), error);
             }
@@ -581,10 +574,10 @@ namespace NiORM.SQLServer.Core
             {
                 NiORMLogger.LogDebug($"Adding new {TypeName} entity", "Entities.Add");
 
-                var Type = RealTypeName;
+                string? Type = RealTypeName;
                 if (entity is IView)
                 {
-                    var error = $"Entity type {Type} cannot be added because it's a view";
+                    string error = $"Entity type {Type} cannot be added because it's a view";
                     NiORMLogger.LogError(error, "Entities.Add");
                     throw new NiORMValidationException(error, entity);
                 }
@@ -598,7 +591,7 @@ namespace NiORM.SQLServer.Core
                     NiORMLogger.LogDebug("Set CreatedDateTime and UpdatedDateTime for updatable entity", "Entities.Add");
                 }
 
-                var ListOfProperties = Properties!.ToList();
+                List<string> ListOfProperties = Properties!.ToList();
 
                 // Handle primary key properties
                 PrimaryKeysDetails!.ForEach((pk) =>
@@ -625,10 +618,10 @@ namespace NiORM.SQLServer.Core
                 ListOfProperties = ListOfProperties.Distinct().ToList();
 
                 // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var valuesClause = paramHelper.BuildInsertValuesClause(ListOfProperties, entity);
+                SqlParameterHelper paramHelper = new();
+                string valuesClause = paramHelper.BuildInsertValuesClause(ListOfProperties, entity);
 
-                var query = $@"INSERT INTO {this.TableName} 
+                string query = $@"INSERT INTO {this.TableName} 
                                ({string.Join(", ", ListOfProperties.Select(c => $"[{c}]"))})
                                {valuesClause}";
 
@@ -641,7 +634,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while adding {TypeName} entity: {ex.Message}";
+                string error = $"Unexpected error while adding {TypeName} entity: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Add", null, ex);
                 throw new NiORMException(error, ex, null, "Add");
             }
@@ -658,18 +651,18 @@ namespace NiORM.SQLServer.Core
         {
             if (entity == null)
             {
-                var error = "Entity cannot be null";
+                string error = "Entity cannot be null";
                 NiORMLogger.LogError(error, "Entities.Edit");
                 throw new ArgumentNullException(nameof(entity), error);
             }
 
             try
             {
-                var Type = RealTypeName;
+                string? Type = RealTypeName;
 
                 if (entity is IView)
                 {
-                    var error = $"Entity type {Type} cannot be updated because it's a view";
+                    string error = $"Entity type {Type} cannot be updated because it's a view";
                     NiORMLogger.LogError(error, "Entities.Edit");
                     throw new NiORMValidationException(error, entity);
                 }
@@ -682,22 +675,22 @@ namespace NiORM.SQLServer.Core
                     NiORMLogger.LogDebug("Set UpdatedDateTime for updatable entity", "Entities.Edit");
                 }
 
-                var ListOfProperties = Properties!.ToList();
+                List<string> ListOfProperties = Properties!.ToList();
 
-                var PrimaryKeys = Keys;
+                List<string>? PrimaryKeys = Keys;
 
                 ListOfProperties.AddRange(PrimaryKeysDetails!.Where(c => c.IsAutoIncremental == false).Select(c => c.Name).ToList());
                 ListOfProperties = ListOfProperties.Distinct().ToList();
                 ListOfProperties = ListOfProperties.Where(c => !PrimaryKeysDetails!.Any(cc => cc.Name == c && cc.IsAutoIncremental == true)).ToList();
 
                 // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var setClause = paramHelper.BuildUpdateSetClause(ListOfProperties, entity);
-                var whereClause = paramHelper.BuildPrimaryKeyWhereClause(PrimaryKeys!, entity);
+                SqlParameterHelper paramHelper = new();
+                string setClause = paramHelper.BuildUpdateSetClause(ListOfProperties, entity);
+                string whereClause = paramHelper.BuildPrimaryKeyWhereClause(PrimaryKeys!, entity);
 
-                var query = $"UPDATE {this.TableName} {setClause} {whereClause}";
+                string query = $"UPDATE {this.TableName} {setClause} {whereClause}";
 
-                var rowsAffected = SqlMaster.Execute(query, paramHelper);
+                int rowsAffected = SqlMaster.Execute(query, paramHelper);
                 NiORMLogger.LogInfo($"Successfully updated {TypeName} entity, {rowsAffected} rows affected", "Entities.Edit");
             }
             catch (NiORMException)
@@ -706,7 +699,7 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while updating {TypeName} entity: {ex.Message}";
+                string error = $"Unexpected error while updating {TypeName} entity: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Edit", null, ex);
                 throw new NiORMException(error, ex, null, "Edit");
             }
@@ -722,7 +715,7 @@ namespace NiORM.SQLServer.Core
         {
             if (entity == null)
             {
-                var error = "Entity cannot be null";
+                string error = "Entity cannot be null";
                 NiORMLogger.LogError(error, "Entities.Remove");
                 throw new ArgumentNullException(nameof(entity), error);
             }
@@ -732,18 +725,18 @@ namespace NiORM.SQLServer.Core
 
                 if (Keys == null || !Keys.Any())
                 {
-                    var error = $"Entity {TypeName} must have at least one primary key to be removed";
+                    string error = $"Entity {TypeName} must have at least one primary key to be removed";
                     NiORMLogger.LogError(error, "Entities.Remove");
                     throw new NiORMValidationException(error, entity);
                 }
 
                 // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var whereClause = paramHelper.BuildPrimaryKeyWhereClause(Keys, entity);
+                SqlParameterHelper paramHelper = new();
+                string whereClause = paramHelper.BuildPrimaryKeyWhereClause(Keys, entity);
 
-                var query = $"DELETE FROM {this.TableName} {whereClause}";
+                string query = $"DELETE FROM {this.TableName} {whereClause}";
 
-                var rowsAffected = SqlMaster.Execute(query, paramHelper);
+                int rowsAffected = SqlMaster.Execute(query, paramHelper);
                 NiORMLogger.LogInfo($"Successfully removed {TypeName} entity, {rowsAffected} rows affected", "Entities.Remove");
             }
             catch (NiORMException)
@@ -752,7 +745,34 @@ namespace NiORM.SQLServer.Core
             }
             catch (Exception ex)
             {
-                var error = $"Unexpected error while removing {TypeName} entity: {ex.Message}";
+                string error = $"Unexpected error while removing {TypeName} entity: {ex.Message}";
+                NiORMLogger.LogError(error, "Entities.Remove", null, ex);
+                throw new NiORMException(error, ex, null, "Remove");
+            }
+        }
+
+        public void Remove(Expression<Func<T, bool>> predicate)
+        {
+
+            try
+            {
+
+                // Use parameterized query to prevent SQL injection
+                SqlParameterHelper paramHelper = new();
+                string Where = ExpressionToString(predicate.Body);
+
+                string query = $"DELETE FROM {this.TableName} {Where}";
+
+                int rowsAffected = SqlMaster.Execute(query, paramHelper);
+                NiORMLogger.LogInfo($"Successfully removed {TypeName} entity, {rowsAffected} rows affected", "Entities.Remove");
+            }
+            catch (NiORMException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string error = $"Unexpected error while removing {TypeName} entity: {ex.Message}";
                 NiORMLogger.LogError(error, "Entities.Remove", null, ex);
                 throw new NiORMException(error, ex, null, "Remove");
             }
@@ -768,93 +788,41 @@ namespace NiORM.SQLServer.Core
             return List(whereQuery);
         }
 
-        /// <summary>
-        /// Safe method to filter entities using multiple property-value conditions (SQL injection safe)
-        /// </summary>
-        /// <param name="conditions">Dictionary of column names and their values</param>
-        /// <returns>A list of filtered entities</returns>
-        /// <exception cref="ArgumentException">Thrown when conditions is null or empty</exception>
-        /// <exception cref="NiORMException">Thrown when there's an error during filtering</exception>
-        public List<T> WhereMultiple(Dictionary<string, object?> conditions)
+        public void Set(Expression<Func<T, bool>> predicate, object Value, string? whereCondition = null)
         {
-            if (conditions == null || !conditions.Any())
-                throw new ArgumentException("Conditions cannot be null or empty", nameof(conditions));
+
 
             try
             {
+                string? Type = RealTypeName;
+
+
+                List<string> ListOfProperties = Properties!.ToList();
+
+                List<string>? PrimaryKeys = Keys;
+
                 // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var whereClause = paramHelper.BuildWhereClause(conditions);
+                SqlParameterHelper paramHelper = new();
+                string setClause = ExpressionToString(predicate.Body);
 
-                var query = $"SELECT * FROM {this.TableName} {whereClause}";
 
-                NiORMLogger.LogDebug($"Executing WhereMultiple query for {TypeName} with {conditions.Count} conditions", "Entities.WhereMultiple");
-                return SqlMaster.Get(query, paramHelper);
+                string query = $"UPDATE {this.TableName} {setClause}  {(whereCondition == null ? "" : $"where {whereCondition}")}";
+
+                int rowsAffected = SqlMaster.Execute(query, paramHelper);
+                NiORMLogger.LogInfo($"Successfully updated {TypeName} entity, {rowsAffected} rows affected", "Entities.Edit");
+            }
+            catch (NiORMException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                var error = $"Error executing WhereMultiple query for {TypeName}: {ex.Message}";
-                NiORMLogger.LogError(error, "Entities.WhereMultiple", null, ex);
-                throw new NiORMException(error, ex, null, "WhereMultiple");
+                string error = $"Unexpected error while updating {TypeName} entity: {ex.Message}";
+                NiORMLogger.LogError(error, "Entities.Edit", null, ex);
+                throw new NiORMException(error, ex, null, "Edit");
             }
         }
 
-        /// <summary>
-        /// Safe method to find entities by a single property value (SQL injection safe)
-        /// </summary>
-        /// <param name="propertyName">The property name to filter by</param>
-        /// <param name="value">The value to search for</param>
-        /// <returns>A list of entities matching the criteria</returns>
-        /// <exception cref="ArgumentException">Thrown when property name is null or empty</exception>
-        /// <exception cref="NiORMException">Thrown when there's an error during the search</exception>
-        public List<T> FindByProperty(string propertyName, object? value)
-        {
-            if (string.IsNullOrWhiteSpace(propertyName))
-                throw new ArgumentException("Property name cannot be null or empty", nameof(propertyName));
-
-            try
-            {
-                var conditions = new Dictionary<string, object?> { { propertyName, value } };
-                return WhereMultiple(conditions);
-            }
-            catch (Exception ex)
-            {
-                var error = $"Error finding {TypeName} by property {propertyName}: {ex.Message}";
-                NiORMLogger.LogError(error, "Entities.FindByProperty", null, ex);
-                throw new NiORMException(error, ex, null, "FindByProperty");
-            }
-        }
-
-        /// <summary>
-        /// Safe method to get the first entity matching multiple conditions (SQL injection safe)
-        /// </summary>
-        /// <param name="conditions">Dictionary of column names and their values</param>
-        /// <returns>The first matching entity or null</returns>
-        /// <exception cref="ArgumentException">Thrown when conditions is null or empty</exception>
-        /// <exception cref="NiORMException">Thrown when there's an error during the search</exception>
-        public T? FirstOrDefaultMultiple(Dictionary<string, object?> conditions)
-        {
-            if (conditions == null || !conditions.Any())
-                throw new ArgumentException("Conditions cannot be null or empty", nameof(conditions));
-
-            try
-            {
-                // Use parameterized query to prevent SQL injection
-                var paramHelper = new SqlParameterHelper();
-                var whereClause = paramHelper.BuildWhereClause(conditions);
-
-                var query = $"SELECT TOP(1) * FROM {this.TableName} {whereClause}";
-
-                NiORMLogger.LogDebug($"Executing FirstOrDefaultMultiple query for {TypeName} with {conditions.Count} conditions", "Entities.FirstOrDefaultMultiple");
-                return SqlMaster.Get(query, paramHelper).FirstOrDefault();
-            }
-            catch (Exception ex)
-            {
-                var error = $"Error executing FirstOrDefaultMultiple query for {TypeName}: {ex.Message}";
-                NiORMLogger.LogError(error, "Entities.FirstOrDefaultMultiple", null, ex);
-                throw new NiORMException(error, ex, null, "FirstOrDefaultMultiple");
-            }
-        }
 
     }
 }

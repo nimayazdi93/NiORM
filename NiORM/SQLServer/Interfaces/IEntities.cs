@@ -46,19 +46,18 @@ namespace NiORM.SQLServer.Interfaces
         /// <param name="entity">The entity to remove</param>
         void Remove(T entity);
 
-        /// <summary>
-        /// Filters entities using a simple property-value predicate
-        /// </summary>
-        /// <param name="Predict">A tuple containing property name and value</param>
-        /// <returns>A list of filtered entities</returns>
-        List<T> Where((string, string) Predict);
+        void Remove(Expression<Func<T, bool>> predicate);
+
+        void Set(Expression<Func<T, bool>> predicate, object Value, string? whereConditions = null);
+
+
 
         /// <summary>
         /// Filters entities using a LINQ expression
         /// </summary>
         /// <param name="predicate">The LINQ expression predicate</param>
         /// <returns>A list of filtered entities</returns>
-        List<T> Where(Expression<Func<T, bool>> predicate);
+        IWhereEntities<T> Where(Expression<Func<T, bool>> predicate);
 
         /// <summary>
         /// Executes a custom SQL query and returns mapped entities
@@ -90,6 +89,13 @@ namespace NiORM.SQLServer.Interfaces
         T? Find(string id);
 
         /// <summary>
+        /// Finds an entity using its string primary key
+        /// </summary>
+        /// <param name="id">The primary key value</param>
+        /// <returns>The entity if found, null otherwise</returns>
+        T? Find(object id);
+
+        /// <summary>
         /// Returns the first entity matching the specified query, or null if none found
         /// </summary>
         /// <param name="Query">The WHERE clause query</param>
@@ -101,6 +107,13 @@ namespace NiORM.SQLServer.Interfaces
         /// </summary>
         /// <returns>The first entity or null</returns>
         T? FirstOrDefault();
+
+        /// <summary>
+        /// Returns the first entity in the table, or null if the table is empty
+        /// </summary>
+        /// <param name="predicate">The LINQ expression predicate</param>
+        /// <returns>The first entity or null</returns>
+        T? FirstOrDefault(Expression<Func<T, bool>> predicate);
 
         /// <summary>
         /// Executes a custom SQL command (non-query)
@@ -121,26 +134,5 @@ namespace NiORM.SQLServer.Interfaces
         /// <returns>A list of filtered entities</returns>
         List<T> List(string Query);
 
-        /// <summary>
-        /// Safe method to filter entities using multiple property-value conditions (SQL injection safe)
-        /// </summary>
-        /// <param name="conditions">Dictionary of column names and their values</param>
-        /// <returns>A list of filtered entities</returns>
-        List<T> WhereMultiple(Dictionary<string, object?> conditions);
-
-        /// <summary>
-        /// Safe method to find entities by a single property value (SQL injection safe)
-        /// </summary>
-        /// <param name="propertyName">The property name to filter by</param>
-        /// <param name="value">The value to search for</param>
-        /// <returns>A list of entities matching the criteria</returns>
-        List<T> FindByProperty(string propertyName, object? value);
-
-        /// <summary>
-        /// Safe method to get the first entity matching multiple conditions (SQL injection safe)
-        /// </summary>
-        /// <param name="conditions">Dictionary of column names and their values</param>
-        /// <returns>The first matching entity or null</returns>
-        T? FirstOrDefaultMultiple(Dictionary<string, object?> conditions);
     }
 }

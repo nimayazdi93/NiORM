@@ -15,7 +15,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>ORM;SQL;Object-Relation;</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
-    <Version>1.6.0-beta.1</Version>
+    <Version>1.6.0-beta.2</Version>
 	  
     <PackageReleaseNotes>SECURITY UPDATE v1.5.0: Complete SQL injection protection with parameterized queries, automatic security validation, safe alternative methods (WhereMultiple, FindByProperty), security logging, and comprehensive protection guide. All existing methods now secure by default!</PackageReleaseNotes>
     <PackAsTool>False</PackAsTool>
