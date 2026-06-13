@@ -25,7 +25,32 @@ Nuget Package Manager:
 
 ```dotnet add package NiORM```
 
+## 🤖 AI Agent Skill
 
+Use NiORM with coding agents (Cursor, Claude Code, Cline, and others) by installing the official **niorm-skill**. It teaches the agent how to map entities, build `DataCore` services, run CRUD and LINQ queries, use raw SQL safely, and handle logging and errors — based on the actual NiORM API and `NiORM.Test` examples.
+
+**Install globally** (available in all projects):
+
+```bash
+npx skills add nimayazdi93/NiORM-skill -g -y
+```
+
+**Install for the current project only:**
+
+```bash
+npx skills add nimayazdi93/NiORM-skill -y
+```
+
+**Browse on skills.sh:** [skills.sh/nimayazdi93/NiORM-skill](https://skills.sh/nimayazdi93/NiORM-skill)
+
+**Skill repository:** [github.com/nimayazdi93/NiORM-skill](https://github.com/nimayazdi93/NiORM-skill)
+
+The skill includes:
+- `SKILL.md` — quick start, CRUD, querying, security rules
+- `references/api-reference.md` — full API and LINQ limitations
+- `references/examples.md` — copy-paste patterns from this repo
+
+After installation, mention NiORM or ask the agent to use the **niorm-skill** when generating data-access code.
 
 ## Quick Start
 Here’s how you can get started with NiORM in your application:
